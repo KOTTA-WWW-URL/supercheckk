@@ -107,7 +107,7 @@
 <div id="substyle-screen" class="screen">
     <h2>付加機能を選択</h2>
     <button class="menu-btn" onclick="setFinalStyle('gacha')" style="background:#ffc107; color:black;">ガチャモード (4回正解でガチャ)</button>
-    <button class="menu-btn" onclick="setFinalStyle('study')" style="background:#17a2b8;">勉強モード (ガイドあり・ガチャなし)</button>
+    <button class="menu-btn" onclick="setFinalStyle('study')" style="background:#17a2b8;">勉強モード</button>
 </div>
 
 <div id="admin-screen" class="screen">
@@ -373,7 +373,7 @@
                 correctCount++;
                 if (correctCount >= 4) {
                     correctCount = 0;
-                    showMsg("正解！", "green", null, "4回正解達成！ガチャ解禁！", true);
+                    showMsg("正解！", "green", null, "4回正解達成！おめでと！", true);
                     return;
                 }
             }
