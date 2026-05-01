@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Game - Mode Select Edition</title>
+    <style>
+        :root {
+            --key-bg: #ffffff;
+            --bg-color: #d1d4d9;
+            --special-key-bg: #adb5bd;
+            --active-bg: #a0a0a0;
+        }
+        body {
+            margin: 0; background-color: #f8f9fa;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; overflow: hidden;
+        }
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; display: none; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 10;
+        }
+        .active-screen { display: flex; }
+        .menu-btn {
+            padding: 15px 30px; margin: 8px; font-size: 18px;
+            cursor: pointer; border: none; background: #007bff; color: white; border-radius: 8px;
+            min-width: 280px; transition: 0.2s;
+        }
+        #admin-trigger {
+            position: absolute; bottom: 20px; right: 20px;
+            padding: 8px 15px; background: #6c757d; color: white;
+            border-radius: 5px; cursor: pointer; font-size: 12px; border: none; opacity: 0.6;
+        }
+        /* Admin Console */
+        #admin-screen { background: #1e1e1e; color: #00ff00; font-family: monospace; padding: 20px; box-sizing: border-box; }
+        #admin-console { width: 95%; height: 60%; background: #000; color: #00ff00; padding: 10px; overflow-y: auto; border: 1px solid #333; margin-bottom: 10px; font-size: 14px; white-space: pre-wrap; }
+        #admin-input { width: 95%; background: #000; color: #00ff00; border: 1px solid #00ff00; padding: 10px; font-family: monospace; outline: none; }
+        
+        /* Game UI */
+        #message-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; background: rgba(255,255,255,0.95); }
+        #message-content { font-size: 70px; font-weight: bold; }
+        #message-sub { font-size: 24px; color: #333; margin: 20px 0; text-align: center; }
+        #game-container { margin-top: 60px; text-align: center; width: 95%; display: none; }
+        #mondai-display { font-size: 22px; margin-bottom: 20px; color: #555; }
+        #answer-area { font-size: 28px; font-weight: bold; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; align-items: center; }
+        .input-box { border-bottom: 3px solid #ccc; min-width: 80px; height: 40px; display: flex; align-items: center; justify-content: center; padding: 0 5px; }
+        .input-box.active-box { border-bottom-color: #007bff; color: #007bff; }
+        .cursor { width: 2px; height: 24px; background-color: #007bff; animation: blink 0.8s infinite; margin-left: 2px; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        
+        /* Gacha UI */
+        #gacha-result { text-align: center; margin-top: 20px; display: none; }
+        #gacha-img { max-width: 250px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        #gacha-prob { margin-top: 10px; font-weight: bold; color: #666; }
+
+        .keyboard { position: fixed; bottom: 0; width: 100%; background-color: var(--bg-color); padding: 10px 0; display: none; }
+        .row { display: flex; justify-content: center; margin-bottom: 8px; }
+        .key { flex: 1; height: 50px; margin: 0 3px; background-color: var(--key-bg); border: none; border-radius: 6px; font-size: 18px; cursor: pointer; box-shadow: 0 4px 0 #999; transition: transform 0.08s, box-shadow 0.08s; }
+        .key.active { background-color: var(--active-bg); box-shadow: 0 1px 0 #999; transform: translateY(3px); }
+        .key-special { background-color: var(--special-key-bg); flex: 1.5; }
+        .key.shift-active { background-color: #ffc107; color: black; font-weight: bold; }
+        #allend-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 60; background: white; }
+        #allend-title { font-size: 80px; font-weight: bold; letter-spacing: 4px; color: #222; }
+        #allend-score { font-size: 32px; color: #555; margin: 20px 0; }
+        #allend-back { padding: 15px 40px; font-size: 20px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="allend-overlay">
+    <div id="allend-title">ALL END</div>
+    <div id="allend-score"></div>
+    <button id="allend-back" onclick="goToStart()">トップへ戻る</button>
+</div>
+
+<div id="message-overlay">
+    <div id="message-content"></div>
+    <div id="message-sub"></div>
+    <div id="gacha-result">
+        <img id="gacha-img" src="">
+        <div id="gacha-prob"></div>
+    </div>
+    <button id="gacha-btn" class="menu-btn" style="display:none; background:#ffc107; color:black;" onclick="pullGacha()">ガチャを引く！</button>
+    <button id="next-btn-manual" class="menu-btn" style="display:none; background:#28a745;" onclick="closeMessageAndNext()">次の問題</button>
+</div>
+
+<div id="start-screen" class="screen active-screen">
+    <h1>Versionを選択</h1>
+    <div id="ver-list">読み込み中...</div>
+    <button id="admin-trigger" onclick="tryAdminAccess()">管理者</button>
+</div>
+
+<div id="order-screen" class="screen">
+    <h2>出題順を選択</h2>
+    <button class="menu-btn" onclick="setOrder('normal')">順番どおり</button>
+    <button class="menu-btn" onclick="setOrder('random')">ランダム</button>
+</div>
+
+<div id="style-screen" class="screen">
+    <h2>基本モードを選択</h2>
+    <button class="menu-btn" onclick="setBaseStyle('once')">一周モード</button>
+    <button class="menu-btn" onclick="setBaseStyle('retry')">克服モード</button>
+</div>
+
+<div id="substyle-screen" class="screen">
+    <h2>付加機能を選択</h2>
+    <button class="menu-btn" onclick="setFinalStyle('gacha')" style="background:#ffc107; color:black;">ガチャモード (4回正解でガチャ)</button>
+    <button class="menu-btn" onclick="setFinalStyle('study')" style="background:#17a2b8;">勉強モード (ガイドあり・ガチャなし)</button>
+</div>
+
+<div id="admin-screen" class="screen">
+    <h2>ADMIN CONSOLE</h2>
+    <div id="admin-console"></div>
+    <input type="text" id="admin-input" placeholder="Type command..." onkeydown="processAdminCommand(event)">
+</div>
+
+<div id="game-container">
+    <div id="mondai-display"></div>
+    <div id="answer-area"></div>
+</div>
+
+<div class="keyboard" id="main-keyboard">
+    <div class="row"><button class="key" data-key="q" onclick="handleInput('q')">q</button><button class="key" data-key="w" onclick="handleInput('w')">w</button><button class="key" data-key="e" onclick="handleInput('e')">e</button><button class="key" data-key="r" onclick="handleInput('r')">r</button><button class="key" data-key="t" onclick="handleInput('t')">t</button><button class="key" data-key="y" onclick="handleInput('y')">y</button><button class="key" data-key="u" onclick="handleInput('u')">u</button><button class="key" data-key="i" onclick="handleInput('i')">i</button><button class="key" data-key="o" onclick="handleInput('o')">o</button><button class="key" data-key="p" onclick="handleInput('p')">p</button></div>
+    <div class="row"><button class="key" data-key="a" onclick="handleInput('a')">a</button><button class="key" data-key="s" onclick="handleInput('s')">s</button><button class="key" data-key="d" onclick="handleInput('d')">d</button><button class="key" data-key="f" onclick="handleInput('f')">f</button><button class="key" data-key="g" onclick="handleInput('g')">g</button><button class="key" data-key="h" onclick="handleInput('h')">h</button><button class="key" data-key="j" onclick="handleInput('j')">j</button><button class="key" data-key="k" onclick="handleInput('k')">k</button><button class="key" data-key="l" onclick="handleInput('l')">l</button></div>
+    <div class="row"><button class="key key-special" data-key="Shift" onclick="handleInput('Shift')">Shift</button><button class="key" data-key="z" onclick="handleInput('z')">z</button><button class="key" data-key="x" onclick="handleInput('x')">x</button><button class="key" data-key="c" onclick="handleInput('c')">c</button><button class="key" data-key="v" onclick="handleInput('v')">v</button><button class="key" data-key="b" onclick="handleInput('b')">b</button><button class="key" data-key="n" onclick="handleInput('n')">n</button><button class="key" data-key="m" onclick="handleInput('m')">m</button><button class="key key-special" data-key="Backspace" onclick="handleInput('Backspace')">⌫</button></div>
+    <div class="row"><button class="key" data-key="'" onclick="handleInput('\'')">'</button><button class="key" data-key="." onclick="handleInput('.')">.</button><button class="key" data-key="?" onclick="handleInput('?')">?</button><button class="key key-space" data-key=" " onclick="handleInput(' ')">Space</button><button class="key key-special" data-key="Enter" onclick="handleInput('Enter')">Enter</button></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBxS8UwIh4wKg36wXKI35mUht9lwCudxus",
+        authDomain: "my-typing-game-b013f.firebaseapp.com",
+        projectId: "my-typing-game-b013f",
+        storageBucket: "my-typing-game-b013f.firebasestorage.app",
+        messagingSenderId: "377063850103",
+        appId: "1:377063850103:web:f708a06aa0e9b3b7e44672",
+        databaseURL: "https://my-typing-game-b013f-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = ref(db, 'mondaiData');
+
+    window.rawMondai = [];
+    window.rawKotaeGroups = [];
+    window.hani_end = [];
+    window.kaitouran = [];
+
+    onValue(dbRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            window.rawMondai = data.mondai || [];
+            window.rawKotaeGroups = data.kotae || [];
+            window.hani_end = data.hani || [];
+            window.kaitouran = data.kaitouran || [];
+            renderVerList();
+        }
+    });
+
+    window.saveToFirebase = function() {
+        set(dbRef, {
+            mondai: window.rawMondai,
+            kotae: window.rawKotaeGroups,
+            hani: window.hani_end,
+            kaitouran: window.kaitouran
+        }).then(() => console.log("Cloud Updated!"));
+    };
+</script>
+
+<script>
+    let playStyle = 'once'; // once or retry
+    let subStyle = 'gacha'; // gacha or study
+    let playOrder = 'normal';
+    let currentPool = [], currentPos = 0;
+    let inputs = [], activeInputIdx = 0, isShift = false, isWaiting = false;
+    let correctCount = 0;
+    let totalQuestions = 0, correctTotal = 0; // 一周モード用スコア
+    let retryPool = []; // 克服モード用: 間違えた問題プール
+
+    const GACHA_TABLE = [
+        { src: "spched/Cn_transparent.png", prob: 40 },
+        { src: "spched/En_transparent.png", prob: 40 },
+        { src: "spched/An_transparent.png", prob: 10 },
+        { src: "spched/Dn_transparent.png", prob: 8 },
+        { src: "spched/Bn_transparent.png", prob: 2 }
+    ];
+
+    function renderVerList() {
+        const listEl = document.getElementById('ver-list');
+        if (!listEl) return;
+        listEl.innerHTML = "";
+        window.hani_end.forEach((val, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'menu-btn';
+            btn.innerText = `Ver ${i + 1}.0`;
+            btn.onclick = () => {
+                const start = i === 0 ? 0 : window.hani_end[i-1] + 1;
+                currentPool = Array.from({length: val - start + 1}, (_, k) => k + start);
+                showScreen('order-screen');
+            };
+            listEl.appendChild(btn);
+        });
+    }
+
+    function setOrder(o) { playOrder = o; showScreen('style-screen'); }
+    function setBaseStyle(s) { playStyle = s; showScreen('substyle-screen'); }
+    function setFinalStyle(s) { subStyle = s; correctCount = 0; startGame(); }
+
+    function startGame() {
+        currentPos = 0;
+        correctCount = 0;
+        correctTotal = 0;
+        retryPool = [];
+        if (playOrder === 'random') currentPool.sort(() => Math.random() - 0.5);
+        totalQuestions = currentPool.length;
+        showScreen('');
+        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('main-keyboard').style.display = 'block';
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        const idx = currentPool[currentPos];
+
+        // mondai[idx] → 問題文として上部に表示
+        const mondaiText = window.rawMondai[idx] || "";
+        document.getElementById('mondai-display').innerText = mondaiText;
+
+        // kaitouran[idx] → () を含むテンプレート文字列として入力欄を生成
+        const template = window.kaitouran[idx] || "";
+        const ans = window.rawKotaeGroups[idx] || [];
+
+        const area = document.getElementById('answer-area');
+        area.innerHTML = "";
+
+        // "()" で split して穴埋め欄を生成
+        const parts = template.split("()");
+        inputs = new Array(parts.length - 1).fill("");
+        activeInputIdx = 0;
+
+        // 入力欄の幅: 対応するkotae[i]の文字数から設定
+        parts.forEach((pt, i) => {
+            if (pt !== "") {
+                const span = document.createElement('span');
+                span.innerText = pt;
+                area.appendChild(span);
+            }
+            if (i < parts.length - 1) {
+                const b = document.createElement('div');
+                b.className = 'input-box';
+                b.id = `box-${i}`;
+                const ansLen = (ans[i] || "").length;
+                if (ansLen > 0) b.style.minWidth = Math.max(80, ansLen * 16) + "px";
+                area.appendChild(b);
+            }
+        });
+
+        updateDisplay();
+    }
+
+    function updateDisplay() {
+        const idx = currentPool[currentPos];
+        const ans = window.rawKotaeGroups[idx] || [];
+
+        inputs.forEach((v, i) => {
+            const b = document.getElementById(`box-${i}`);
+            if (!b) return;
+            b.classList.remove('active-box');
+            b.innerHTML = "";
+
+            if (i === activeInputIdx) {
+                b.classList.add('active-box');
+                if (v === "" && subStyle === 'study') {
+                    // 勉強モード: 空欄ならガイドを薄く表示
+                    b.innerText = ans[i] || "";
+                    b.style.color = "#ccc";
+                } else {
+                    b.innerText = v;
+                    b.style.color = "#007bff";
+                }
+                const c = document.createElement('span');
+                c.className = 'cursor';
+                b.appendChild(c);
+            } else {
+                // 入力済みまたは非アクティブ
+                b.innerText = v || (subStyle === 'study' ? ans[i] : "");
+                b.style.color = v ? "#333" : "#ccc";
+            }
+        });
+    }
+
+    function flashKey(key) {
+        // Shiftキーはshift-activeで管理するのでflashしない
+        if (key === 'Shift') return;
+        const btn = document.querySelector(`[data-key="${key}"]`);
+        if (!btn) return;
+        btn.classList.add('active');
+        setTimeout(() => btn.classList.remove('active'), 150);
+    }
+
+    function updateShiftDisplay() {
+        document.querySelectorAll('.key[data-key]').forEach(btn => {
+            const k = btn.getAttribute('data-key');
+            if (k && k.length === 1 && k >= 'a' && k <= 'z') {
+                btn.innerText = isShift ? k.toUpperCase() : k;
+            }
+            if (k === 'Shift') {
+                if (isShift) {
+                    btn.classList.add('shift-active');
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('shift-active');
+                    btn.classList.remove('active');
+                }
+            }
+        });
+    }
+
+    function handleInput(key) {
+        if (isWaiting || document.getElementById('admin-screen').classList.contains('active-screen')) return;
+        flashKey(key);
+
+        if (key === "Shift") {
+            isShift = !isShift;
+            updateShiftDisplay();
+            return;
+        }
+
+        if (key === "Backspace") {
+            if (inputs[activeInputIdx] === "") {
+                if (activeInputIdx > 0) activeInputIdx--;
+            } else {
+                inputs[activeInputIdx] = inputs[activeInputIdx].slice(0, -1);
+            }
+        } else if (key === "Enter") {
+            if (inputs.length > 1 && activeInputIdx < inputs.length - 1) {
+                activeInputIdx++;
+            } else {
+                checkAnswer();
+            }
+        } else {
+            inputs[activeInputIdx] += isShift ? key.toUpperCase() : key.toLowerCase();
+            isShift = false;
+            updateShiftDisplay();
+        }
+        updateDisplay();
+    }
+
+    function checkAnswer() {
+        const idx = currentPool[currentPos];
+        const ans = window.rawKotaeGroups[idx] || [];
+        const template = window.kaitouran[idx] || "";
+
+        // 各()をkotaeの各要素と1対1で比較
+        const ok = inputs.every((v, i) => v.trim().toLowerCase() === (ans[i] || "").toLowerCase());
+
+        // 不正解時の表示: kaitouranの()に(kotae)を代入して文全体を表示
+        const parts = template.split("()");
+        let correctSentence = "";
+        parts.forEach((pt, i) => {
+            correctSentence += pt;
+            if (i < parts.length - 1) correctSentence += `(${ans[i] || ""})`;
+        });
+
+        if (ok) {
+            correctTotal++;
+            if (subStyle === 'gacha') {
+                correctCount++;
+                if (correctCount >= 4) {
+                    correctCount = 0;
+                    showMsg("正解！", "green", null, "4回正解達成！ガチャ解禁！", true);
+                    return;
+                }
+            }
+            showMsg("正解", "green", () => next());
+        } else {
+            // 克服モード: 不正解ならretryPoolに追加
+            if (playStyle === 'retry') retryPool.push(idx);
+            showMsg("不正解", "red", null, `正解: ${correctSentence}`);
+        }
+    }
+
+    function showMsg(m, c, cb, sub="", gachaReady = false) {
+        isWaiting = true;
+        const o = document.getElementById('message-overlay');
+        document.getElementById('message-content').innerText = m;
+        document.getElementById('message-content').style.color = c;
+        document.getElementById('message-sub').innerText = sub;
+
+        document.getElementById('gacha-result').style.display = 'none';
+        const gBtn = document.getElementById('gacha-btn');
+        const nBtn = document.getElementById('next-btn-manual');
+
+        if (gachaReady) {
+            gBtn.style.display = 'block';
+            nBtn.style.display = 'none';
+        } else {
+            gBtn.style.display = 'none';
+            nBtn.style.display = cb ? "none" : "block";
+        }
+
+        o.style.display = 'flex';
+        if (cb) setTimeout(() => { o.style.display='none'; isWaiting=false; cb(); }, 1000);
+    }
+
+    function pullGacha() {
+        const rand = Math.random() * 100;
+        let sum = 0, selected = GACHA_TABLE[0];
+        for (const item of GACHA_TABLE) {
+            sum += item.prob;
+            if (rand <= sum) { selected = item; break; }
+        }
+        document.getElementById('gacha-btn').style.display = 'none';
+        const res = document.getElementById('gacha-result');
+        document.getElementById('gacha-img').src = selected.src;
+        document.getElementById('gacha-prob').innerText = `出現確率: ${selected.prob}%`;
+        res.style.display = 'block';
+        document.getElementById('next-btn-manual').style.display = 'block';
+    }
+
+    function next() {
+        currentPos++;
+        if (currentPos >= currentPool.length) {
+            if (playStyle === 'retry' && retryPool.length > 0) {
+                // 克服モード: 間違えた問題を再度出題
+                currentPool = [...retryPool];
+                retryPool = [];
+                if (playOrder === 'random') currentPool.sort(() => Math.random() - 0.5);
+                currentPos = 0;
+                loadQuestion();
+            } else {
+                showAllEnd();
+            }
+        } else {
+            loadQuestion();
+        }
+    }
+
+    function showAllEnd() {
+        document.getElementById('game-container').style.display = 'none';
+        document.getElementById('main-keyboard').style.display = 'none';
+        const overlay = document.getElementById('allend-overlay');
+        const scoreEl = document.getElementById('allend-score');
+        if (playStyle === 'once') {
+            scoreEl.innerText = `${correctTotal} / ${totalQuestions} 問正解`;
+        } else {
+            scoreEl.innerText = "全問正解！";
+        }
+        overlay.style.display = 'flex';
+    }
+
+    function goToStart() {
+        document.getElementById('allend-overlay').style.display = 'none';
+        showScreen('start-screen');
+    }
+
+    function closeMessageAndNext() {
+        document.getElementById('message-overlay').style.display = 'none';
+        isWaiting = false;
+        next();
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+        document.getElementById('game-container').style.display = 'none';
+        document.getElementById('main-keyboard').style.display = 'none';
+        if (id) document.getElementById(id).classList.add('active-screen');
+    }
+
+    function tryAdminAccess() {
+        if (prompt("Pass?") === "0928") showScreen('admin-screen');
+    }
+
+    // --- Admin Functions ---
+    function logAdmin(t) {
+        const c = document.getElementById('admin-console');
+        c.innerText += t + "\n";
+        c.scrollTop = c.scrollHeight;
+    }
+    function getListByName(name) {
+        if (name === "mondai") return window.rawMondai;
+        if (name === "kotae") return window.rawKotaeGroups;
+        if (name === "hani") return window.hani_end;
+        if (name === "kaitouran") return window.kaitouran;
+        return null;
+    }
+    function processAdminCommand(e) {
+        if (e.key !== "Enter") return;
+        const input = document.getElementById('admin-input');
+        const full = input.value.trim();
+        input.value = "";
+        if (!full) return;
+        logAdmin("> " + full);
+        const p = full.match(/(".*?"|[^"\s]+)/g)?.map(x => x.replace(/"/g, "")) || [];
+        const cmd = p[0]?.toLowerCase();
+        if (cmd === "exit") showScreen('start-screen');
+        else if (cmd === "show") {
+            const listName = p[1]?.toLowerCase();
+            if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
+            else {
+                const list = getListByName(listName);
+                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join(" "):v}`));
+                else logAdmin("Lists: mondai, kotae, hani, kaitouran");
+            }
+        }
+        else if (cmd === "add") {
+            const list = getListByName(p[2]?.toLowerCase());
+            if (!list) return logAdmin("Error: List not found.");
+            const idx = p[1] === "f" ? list.length : parseInt(p[1]);
+            let data = p[3];
+            if (p[2] === "kotae") data = data.split(" ");
+            if (p[2] === "hani") data = parseInt(data);
+            list.splice(idx, 0, data);
+            logAdmin(`Added to ${p[2]} at [${idx}]`);
+            window.saveToFirebase();
+        }
+        else if (cmd === "replace") {
+            const list = getListByName(p[2]?.toLowerCase());
+            if (!list) return logAdmin("Error: List not found.");
+            const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
+            if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
+            let data = p[3];
+            if (p[2] === "kotae") data = data.split(" ");
+            if (p[2] === "hani") data = parseInt(data);
+            list[idx] = data;
+            logAdmin(`Replaced ${p[2]} [${idx}] → ${Array.isArray(data) ? data.join(" ") : data}`);
+            window.saveToFirebase();
+        }
+        else if (cmd === "remove") {
+            const list = getListByName(p[2]?.toLowerCase());
+            if (!list || list.length === 0) return logAdmin("Error: List empty or not found.");
+            const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
+            if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
+            const rem = list.splice(idx, 1);
+            logAdmin(`Removed from ${p[2]} [${idx}] (${rem})`);
+            window.saveToFirebase();
+        }
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (document.activeElement.id === 'admin-input') return;
+        if (e.key === "Enter" || e.key === "Backspace" || e.key === "Shift" || e.key.length === 1) {
+            e.preventDefault();
+            flashKey(e.key === " " ? " " : e.key);
+            handleInput(e.key);
+        }
+    });
+</script>
+</body>
+</html>
