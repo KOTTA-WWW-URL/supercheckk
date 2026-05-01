@@ -107,7 +107,7 @@
 <div id="substyle-screen" class="screen">
     <h2>付加機能を選択</h2>
     <button class="menu-btn" onclick="setFinalStyle('gacha')" style="background:#ffc107; color:black;">ガチャモード (4回正解でガチャ)</button>
-    <button class="menu-btn" onclick="setFinalStyle('study')" style="background:#17a2b8;">勉強モード (ガイドあり・ガチャなし)</button>
+    <button class="menu-btn" onclick="setFinalStyle('study')" style="background:#17a2b8;">勉強モード</button>
 </div>
 
 <div id="admin-screen" class="screen">
@@ -183,11 +183,11 @@
     let retryPool = []; // 克服モード用: 間違えた問題プール
 
     const GACHA_TABLE = [
-        { src: "spched/Cn_transparent.png", prob: 40 },
-        { src: "spched/En_transparent.png", prob: 40 },
-        { src: "spched/An_transparent.png", prob: 10 },
-        { src: "spched/Dn_transparent.png", prob: 8 },
-        { src: "spched/Bn_transparent.png", prob: 2 }
+        { src: "spch/Cn_transparent.png", prob: 40 },
+        { src: "spch/En_transparent.png", prob: 40 },
+        { src: "spch/An_transparent.png", prob: 10 },
+        { src: "spch/Dn_transparent.png", prob: 8 },
+        { src: "spch/Bn_transparent.png", prob: 2 }
     ];
 
     function renderVerList() {
