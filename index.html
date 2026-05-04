@@ -20,6 +20,10 @@
             --special-key-bg: #adb5bd;
             --active-bg: #a0a0a0;
         }
+        /* ダブルタップズーム防止 */
+        * {
+            touch-action: manipulation;
+        }
         body {
             margin: 0; background-color: #f8f9fa;
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -48,9 +52,17 @@
         #admin-input { width: 95%; background: #000; color: #00ff00; border: 1px solid #00ff00; padding: 10px; font-family: monospace; outline: none; }
         
         /* Game UI */
-        #message-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; background: rgba(255,255,255,0.95); }
-        #message-content { font-size: 70px; font-weight: bold; }
-        #message-sub { font-size: 24px; color: #333; margin: 20px 0; text-align: center; }
+        #message-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50; background: rgba(255,255,255,0.95);
+            /* スマホ縦画面でオーバーフローしないようにスクロール可 */
+            overflow-y: auto;
+            padding: 10px 0;
+            box-sizing: border-box;
+        }
+        #message-content { font-size: clamp(36px, 12vw, 70px); font-weight: bold; }
+        #message-sub { font-size: clamp(14px, 4vw, 24px); color: #333; margin: 10px 0; text-align: center; padding: 0 16px; }
         #game-container { margin-top: 60px; text-align: center; width: 95%; display: none; }
         #mondai-display { font-size: 22px; margin-bottom: 20px; color: #555; }
         #answer-area { font-size: 28px; font-weight: bold; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; align-items: center; }
@@ -60,13 +72,35 @@
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         
         /* Gacha UI */
-        #gacha-result { text-align: center; margin-top: 20px; display: none; }
-        #gacha-img { max-width: 250px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        #gacha-prob { margin-top: 10px; font-weight: bold; color: #666; }
+        #gacha-result {
+            text-align: center;
+            margin-top: 10px;
+            display: none;
+        }
+        #gacha-img {
+            /* 縦幅が小さい画面でも画像がはみ出さないようにする */
+            max-width: min(250px, 50vw);
+            max-height: 30vh;
+            width: auto;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #gacha-prob { margin-top: 8px; font-weight: bold; color: #666; font-size: clamp(12px, 3.5vw, 16px); }
 
         .keyboard { position: fixed; bottom: 0; width: 100%; background-color: var(--bg-color); padding: 10px 0; display: none; }
         .row { display: flex; justify-content: center; margin-bottom: 8px; }
-        .key { flex: 1; height: 50px; margin: 0 3px; background-color: var(--key-bg); border: none; border-radius: 6px; font-size: 18px; cursor: pointer; box-shadow: 0 4px 0 #999; transition: transform 0.08s, box-shadow 0.08s; }
+        .key {
+            flex: 1; height: 50px; margin: 0 3px;
+            background-color: var(--key-bg); border: none; border-radius: 6px;
+            font-size: 18px; cursor: pointer;
+            box-shadow: 0 4px 0 #999;
+            transition: transform 0.08s, box-shadow 0.08s;
+            /* キー単体でもダブルタップ拡大を確実に防止 */
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
         .key.active { background-color: var(--active-bg); box-shadow: 0 1px 0 #999; transform: translateY(3px); }
         .key-special { background-color: var(--special-key-bg); flex: 1.5; }
         .key.shift-active { background-color: #ffc107; color: black; font-weight: bold; }
@@ -198,6 +232,16 @@
         { src: "spch/Dn_transparent.png", prob: 8 },
         { src: "spch/Bn_transparent.png", prob: 2 }
     ];
+
+    // ダブルタップによるズームを防止（touchendの連続発火を検知）
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, { passive: false });
 
     function renderVerList() {
         const listEl = document.getElementById('ver-list');
