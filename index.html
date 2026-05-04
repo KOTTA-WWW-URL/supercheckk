@@ -552,36 +552,85 @@
             }
         }
         else if (cmd === "add") {
-            const list = getListByName(p[2]?.toLowerCase());
-            if (!list) return logAdmin("Error: List not found.");
-            const idx = p[1] === "f" ? list.length : parseInt(p[1]);
-            let data = p[3];
-            if (p[2] === "kotae") data = data.split(" ");
-            if (p[2] === "hani") data = parseInt(data);
-            list.splice(idx, 0, data);
-            logAdmin(`Added to ${p[2]} at [${idx}]`);
-            window.saveToFirebase();
+            const listName = p[2]?.toLowerCase();
+            if (listName === "all") {
+                // add <idx/f> all <mondai> <kotae> <kaitouran>
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(" ") : [], kaitouranData = p[5];
+                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae> <kaitouran>");
+                const idxM = p[1] === "f" ? window.rawMondai.length : parseInt(p[1]);
+                const idxK = p[1] === "f" ? window.rawKotaeGroups.length : parseInt(p[1]);
+                const idxR = p[1] === "f" ? window.kaitouran.length : parseInt(p[1]);
+                if ([idxM,idxK,idxR].some(i => isNaN(i) || i < 0)) return logAdmin("Error: Invalid index.");
+                window.rawMondai.splice(idxM, 0, mondaiData);
+                window.rawKotaeGroups.splice(idxK, 0, kotaeData);
+                window.kaitouran.splice(idxR, 0, kaitouranData);
+                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(" ")}" kaitouran="${kaitouranData}"`);
+                window.saveToFirebase();
+            } else {
+                const list = getListByName(listName);
+                if (!list) return logAdmin("Error: List not found.");
+                const idx = p[1] === "f" ? list.length : parseInt(p[1]);
+                if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
+                let data = p[3];
+                if (listName === "kotae") data = data.split(" ");
+                if (listName === "hani") data = parseInt(data);
+                list.splice(idx, 0, data);
+                logAdmin(`Added to ${listName} at [${idx}]`);
+                window.saveToFirebase();
+            }
         }
         else if (cmd === "replace") {
-            const list = getListByName(p[2]?.toLowerCase());
-            if (!list) return logAdmin("Error: List not found.");
-            const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
-            if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
-            let data = p[3];
-            if (p[2] === "kotae") data = data.split(" ");
-            if (p[2] === "hani") data = parseInt(data);
-            list[idx] = data;
-            logAdmin(`Replaced ${p[2]} [${idx}] → ${Array.isArray(data) ? data.join(" ") : data}`);
-            window.saveToFirebase();
+            const listName = p[2]?.toLowerCase();
+            if (listName === "all") {
+                // replace <idx/f> all <mondai> <kotae> <kaitouran>
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(" ") : [], kaitouranData = p[5];
+                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae> <kaitouran>");
+                const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
+                const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
+                const idxR = p[1] === "f" ? window.kaitouran.length - 1 : parseInt(p[1]);
+                if ([idxM,idxK,idxR].some(i => isNaN(i) || i < 0)) return logAdmin("Error: Invalid index.");
+                if (idxM >= window.rawMondai.length || idxK >= window.rawKotaeGroups.length || idxR >= window.kaitouran.length) return logAdmin("Error: Index out of range.");
+                window.rawMondai[idxM] = mondaiData;
+                window.rawKotaeGroups[idxK] = kotaeData;
+                window.kaitouran[idxR] = kaitouranData;
+                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(" ")}" kaitouran="${kaitouranData}"`);
+                window.saveToFirebase();
+            } else {
+                const list = getListByName(listName);
+                if (!list) return logAdmin("Error: List not found.");
+                const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
+                if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
+                let data = p[3];
+                if (listName === "kotae") data = data.split(" ");
+                if (listName === "hani") data = parseInt(data);
+                list[idx] = data;
+                logAdmin(`Replaced ${listName} [${idx}] → ${Array.isArray(data) ? data.join(" ") : data}`);
+                window.saveToFirebase();
+            }
         }
         else if (cmd === "remove") {
-            const list = getListByName(p[2]?.toLowerCase());
-            if (!list || list.length === 0) return logAdmin("Error: List empty or not found.");
-            const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
-            if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
-            const rem = list.splice(idx, 1);
-            logAdmin(`Removed from ${p[2]} [${idx}] (${rem})`);
-            window.saveToFirebase();
+            const listName = p[2]?.toLowerCase();
+            if (listName === "all") {
+                // remove <idx/f> all
+                const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
+                const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
+                const idxR = p[1] === "f" ? window.kaitouran.length - 1 : parseInt(p[1]);
+                if ([idxM,idxK,idxR].some(i => isNaN(i) || i < 0)) return logAdmin("Error: Invalid index.");
+                if (idxM >= window.rawMondai.length || idxK >= window.rawKotaeGroups.length || idxR >= window.kaitouran.length) return logAdmin("Error: Index out of range.");
+                const remM = window.rawMondai.splice(idxM, 1)[0];
+                const remK = window.rawKotaeGroups.splice(idxK, 1)[0];
+                const remR = window.kaitouran.splice(idxR, 1)[0];
+                logAdmin(`Removed all [${idxM}]: mondai="${remM}" kotae="${Array.isArray(remK)?remK.join(" "):remK}" kaitouran="${remR}"`);
+                window.saveToFirebase();
+            } else {
+                const list = getListByName(listName);
+                if (!list || list.length === 0) return logAdmin("Error: List empty or not found.");
+                const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
+                if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
+                const rem = list.splice(idx, 1);
+                logAdmin(`Removed from ${listName} [${idx}] (${rem})`);
+                window.saveToFirebase();
+            }
         }
     }
 
