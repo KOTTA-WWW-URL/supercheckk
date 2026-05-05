@@ -615,13 +615,29 @@
         }
     }
 
+    const ALLOWED_KEYS = new Set([
+        'a','b','c','d','e','f','g','h','i','j','k','l','m',
+        'n','o','p','q','r','s','t','u','v','w','x','y','z',
+        'A','B','C','D','E','F','G','H','I','J','K','L','M',
+        'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+        "'", '.', '?', ' ', 'Enter', 'Backspace', 'Shift'
+    ]);
+
+    const KEY_MAP = {
+        '7': "'",
+        '/': '?',
+    };
+
     window.addEventListener('keydown', (e) => {
         if (document.activeElement.id === 'admin-input') return;
-        if (e.key === "Enter" || e.key === "Backspace" || e.key === "Shift" || e.key.length === 1) {
-            e.preventDefault();
-            flashKey(e.key === " " ? " " : e.key);
-            handleInput(e.key);
-        }
+        e.preventDefault();
+
+        let key = e.key;
+        if (KEY_MAP[key]) key = KEY_MAP[key];
+        if (!ALLOWED_KEYS.has(key)) return;
+
+        flashKey(key === " " ? " " : key);
+        handleInput(key);
     });
 </script>
 </body>
