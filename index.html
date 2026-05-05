@@ -382,7 +382,7 @@
         const ans = window.rawKotaeGroups[idx] || [];
         const template = window.kaitouran[idx] || "";
 
-        const ok = inputs.every((v, i) => v.trim().toLowerCase() === (ans[i] || "").toLowerCase());
+        const ok = inputs.every((v, i) => v.trim() === (ans[i] || ""));
 
         const parts = template.split("()");
         let correctSentence = "";
