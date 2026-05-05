@@ -116,6 +116,7 @@
         <div id="gacha-prob"></div>
     </div>
     <button id="gacha-btn" class="menu-btn" style="display:none; background:#ffc107; color:black;" onclick="pullGacha()">ガチャを引く！</button>
+    <button id="mix-btn" class="menu-btn" style="display:none; background:#6f42c1; color:white;" onclick="mixGacha()">🔀 もう一度混ぜる</button>
     <button id="next-btn-manual" class="menu-btn" style="display:none; background:#28a745;" onclick="closeMessageAndNext()">次の問題</button>
 </div>
 
@@ -435,14 +436,22 @@
         let sum = 0, selected = GACHA_TABLE[0];
         for (const item of GACHA_TABLE) {
             sum += item.prob;
-            if (rand <= sum) { selected = item; break; }
+            if (rand < sum) { selected = item; break; }
         }
         document.getElementById('gacha-btn').style.display = 'none';
         const res = document.getElementById('gacha-result');
         document.getElementById('gacha-img').src = selected.src;
         document.getElementById('gacha-prob').innerText = `出現確率: ${selected.prob}%`;
         res.style.display = 'block';
+        document.getElementById('mix-btn').style.display = 'block';
         document.getElementById('next-btn-manual').style.display = 'block';
+    }
+
+    function mixGacha() {
+        document.getElementById('gacha-result').style.display = 'none';
+        document.getElementById('mix-btn').style.display = 'none';
+        document.getElementById('next-btn-manual').style.display = 'none';
+        document.getElementById('gacha-btn').style.display = 'block';
     }
 
     function next() {
