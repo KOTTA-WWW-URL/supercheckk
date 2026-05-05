@@ -6,11 +6,8 @@
     <title>すーぱーちぇっく(新)</title>
     <meta property="og:title" content="すーぱーちぇっく(新)" />
     <meta property="og:type" content="website" />
-    <!-- ページのURL -->
     <meta property="og:url" content="https://kotta-www-url.github.io/supercheckk/" />
-    <!-- サイトの概要（80〜90文字程度） -->
     <meta property="og:description" content="-すーぱーちぇっく-の練習として開発したものです。scratchのバージョン2です。" />
-    <!-- サイト名 -->
     <meta property="og:site_name" content="すーぱーちぇっく(新)" />
     
     <style>
@@ -20,7 +17,6 @@
             --special-key-bg: #adb5bd;
             --active-bg: #a0a0a0;
         }
-        /* ダブルタップズーム防止 */
         * {
             touch-action: manipulation;
         }
@@ -46,17 +42,14 @@
             padding: 8px 15px; background: #6c757d; color: white;
             border-radius: 5px; cursor: pointer; font-size: 12px; border: none; opacity: 0.6;
         }
-        /* Admin Console */
         #admin-screen { background: #1e1e1e; color: #00ff00; font-family: monospace; padding: 20px; box-sizing: border-box; }
         #admin-console { width: 95%; height: 60%; background: #000; color: #00ff00; padding: 10px; overflow-y: auto; border: 1px solid #333; margin-bottom: 10px; font-size: 14px; white-space: pre-wrap; }
         #admin-input { width: 95%; background: #000; color: #00ff00; border: 1px solid #00ff00; padding: 10px; font-family: monospace; outline: none; }
         
-        /* Game UI */
         #message-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: none; flex-direction: column; align-items: center; justify-content: center;
             z-index: 50; background: rgba(255,255,255,0.95);
-            /* スマホ縦画面でオーバーフローしないようにスクロール可 */
             overflow-y: auto;
             padding: 10px 0;
             box-sizing: border-box;
@@ -71,14 +64,12 @@
         .cursor { width: 2px; height: 24px; background-color: #007bff; animation: blink 0.8s infinite; margin-left: 2px; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
         
-        /* Gacha UI */
         #gacha-result {
             text-align: center;
             margin-top: 10px;
             display: none;
         }
         #gacha-img {
-            /* 縦幅が小さい画面でも画像がはみ出さないようにする */
             max-width: min(250px, 50vw);
             max-height: 30vh;
             width: auto;
@@ -96,7 +87,6 @@
             font-size: 18px; cursor: pointer;
             box-shadow: 0 4px 0 #999;
             transition: transform 0.08s, box-shadow 0.08s;
-            /* キー単体でもダブルタップ拡大を確実に防止 */
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
@@ -216,14 +206,14 @@
 </script>
 
 <script>
-    let playStyle = 'once'; // once or retry
-    let subStyle = 'gacha'; // gacha or study
+    let playStyle = 'once';
+    let subStyle = 'gacha';
     let playOrder = 'normal';
     let currentPool = [], currentPos = 0;
     let inputs = [], activeInputIdx = 0, isShift = false, isWaiting = false;
     let correctCount = 0;
-    let totalQuestions = 0, correctTotal = 0; // 一周モード用スコア
-    let retryPool = []; // 克服モード用: 間違えた問題プール
+    let totalQuestions = 0, correctTotal = 0;
+    let retryPool = [];
 
     const GACHA_TABLE = [
         { src: "spch/Cn_transparent.png", prob: 40 },
@@ -269,24 +259,19 @@
 
     function loadQuestion() {
         const idx = currentPool[currentPos];
-
-        // mondai[idx] → 問題文として上部に表示
         const mondaiText = window.rawMondai[idx] || "";
         document.getElementById('mondai-display').innerText = mondaiText;
 
-        // kaitouran[idx] → () を含むテンプレート文字列として入力欄を生成
         const template = window.kaitouran[idx] || "";
         const ans = window.rawKotaeGroups[idx] || [];
 
         const area = document.getElementById('answer-area');
         area.innerHTML = "";
 
-        // "()" で split して穴埋め欄を生成
         const parts = template.split("()");
         inputs = new Array(parts.length - 1).fill("");
         activeInputIdx = 0;
 
-        // 入力欄の幅: 対応するkotae[i]の文字数から設定
         parts.forEach((pt, i) => {
             if (pt !== "") {
                 const span = document.createElement('span');
@@ -319,26 +304,24 @@
             if (i === activeInputIdx) {
                 b.classList.add('active-box');
                 if (v === "" && subStyle === 'study') {
-                    // 勉強モード: 空欄ならガイドを薄く表示
                     b.innerText = ans[i] || "";
                     b.style.color = "#ccc";
                 } else {
-                    b.innerText = v;
+                    // [FIX 2] スペースを可視化するためにnbspに変換して幅を確保
+                    b.innerText = v.replace(/ /g, '\u00A0');
                     b.style.color = "#007bff";
                 }
                 const c = document.createElement('span');
                 c.className = 'cursor';
                 b.appendChild(c);
             } else {
-                // 入力済みまたは非アクティブ
-                b.innerText = v || (subStyle === 'study' ? ans[i] : "");
+                b.innerText = (v || (subStyle === 'study' ? ans[i] : "")).replace(/ /g, '\u00A0');
                 b.style.color = v ? "#333" : "#ccc";
             }
         });
     }
 
     function flashKey(key) {
-        // Shiftキーはshift-activeで管理するのでflashしない
         if (key === 'Shift') return;
         const btn = document.querySelector(`[data-key="${key}"]`);
         if (!btn) return;
@@ -386,6 +369,12 @@
             } else {
                 checkAnswer();
             }
+        } else if (key === " ") {
+            // [FIX 2] スペース入力後に次の入力欄へ進む
+            inputs[activeInputIdx] += " ";
+            if (activeInputIdx < inputs.length - 1) {
+                activeInputIdx++;
+            }
         } else {
             inputs[activeInputIdx] += isShift ? key.toUpperCase() : key.toLowerCase();
             isShift = false;
@@ -399,10 +388,8 @@
         const ans = window.rawKotaeGroups[idx] || [];
         const template = window.kaitouran[idx] || "";
 
-        // 各()をkotaeの各要素と1対1で比較
         const ok = inputs.every((v, i) => v.trim().toLowerCase() === (ans[i] || "").toLowerCase());
 
-        // 不正解時の表示: kaitouranの()に(kotae)を代入して文全体を表示
         const parts = template.split("()");
         let correctSentence = "";
         parts.forEach((pt, i) => {
@@ -422,7 +409,6 @@
             }
             showMsg("正解", "green", () => next());
         } else {
-            // 克服モード: 不正解ならretryPoolに追加
             if (playStyle === 'retry') retryPool.push(idx);
             showMsg("不正解", "red", null, `正解: ${correctSentence}`);
         }
@@ -470,7 +456,6 @@
         currentPos++;
         if (currentPos >= currentPool.length) {
             if (playStyle === 'retry' && retryPool.length > 0) {
-                // 克服モード: 間違えた問題を再度出題
                 currentPool = [...retryPool];
                 retryPool = [];
                 if (playOrder === 'random') currentPool.sort(() => Math.random() - 0.5);
@@ -519,7 +504,6 @@
         if (prompt("Pass?") === "0928") showScreen('admin-screen');
     }
 
-    // --- Admin Functions ---
     function logAdmin(t) {
         const c = document.getElementById('admin-console');
         c.innerText += t + "\n";
@@ -547,16 +531,17 @@
             if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
             else {
                 const list = getListByName(listName);
-                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join(" "):v}`));
+                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join(","):v}`));
                 else logAdmin("Lists: mondai, kotae, hani, kaitouran");
             }
         }
         else if (cmd === "add") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                // add <idx/f> all <mondai> <kotae> <kaitouran>
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(" ") : [], kaitouranData = p[5];
-                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae> <kaitouran>");
+                // [FIX 3] add f all: fのとき length を使う（末尾への追加）
+                // [FIX 1] kotaeの区切りをカンマに変更
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
+                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length : parseInt(p[1]);
                 const idxR = p[1] === "f" ? window.kaitouran.length : parseInt(p[1]);
@@ -564,15 +549,17 @@
                 window.rawMondai.splice(idxM, 0, mondaiData);
                 window.rawKotaeGroups.splice(idxK, 0, kotaeData);
                 window.kaitouran.splice(idxR, 0, kaitouranData);
-                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(" ")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
                 if (!list) return logAdmin("Error: List not found.");
+                // [FIX 3] add f <list>: fのとき length を使う（末尾への追加）
                 const idx = p[1] === "f" ? list.length : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split(" ");
+                // [FIX 1] kotaeの区切りをカンマに変更
+                if (listName === "kotae") data = data.split(",");
                 if (listName === "hani") data = parseInt(data);
                 list.splice(idx, 0, data);
                 logAdmin(`Added to ${listName} at [${idx}]`);
@@ -582,9 +569,9 @@
         else if (cmd === "replace") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                // replace <idx/f> all <mondai> <kotae> <kaitouran>
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(" ") : [], kaitouranData = p[5];
-                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae> <kaitouran>");
+                // [FIX 1] kotaeの区切りをカンマに変更
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
+                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
                 const idxR = p[1] === "f" ? window.kaitouran.length - 1 : parseInt(p[1]);
@@ -593,7 +580,7 @@
                 window.rawMondai[idxM] = mondaiData;
                 window.rawKotaeGroups[idxK] = kotaeData;
                 window.kaitouran[idxR] = kaitouranData;
-                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(" ")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
@@ -601,17 +588,17 @@
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split(" ");
+                // [FIX 1] kotaeの区切りをカンマに変更
+                if (listName === "kotae") data = data.split(",");
                 if (listName === "hani") data = parseInt(data);
                 list[idx] = data;
-                logAdmin(`Replaced ${listName} [${idx}] → ${Array.isArray(data) ? data.join(" ") : data}`);
+                logAdmin(`Replaced ${listName} [${idx}] → ${Array.isArray(data) ? data.join(",") : data}`);
                 window.saveToFirebase();
             }
         }
         else if (cmd === "remove") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                // remove <idx/f> all
                 const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
                 const idxR = p[1] === "f" ? window.kaitouran.length - 1 : parseInt(p[1]);
@@ -620,7 +607,7 @@
                 const remM = window.rawMondai.splice(idxM, 1)[0];
                 const remK = window.rawKotaeGroups.splice(idxK, 1)[0];
                 const remR = window.kaitouran.splice(idxR, 1)[0];
-                logAdmin(`Removed all [${idxM}]: mondai="${remM}" kotae="${Array.isArray(remK)?remK.join(" "):remK}" kaitouran="${remR}"`);
+                logAdmin(`Removed all [${idxM}]: mondai="${remM}" kotae="${Array.isArray(remK)?remK.join(","):remK}" kaitouran="${remR}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
