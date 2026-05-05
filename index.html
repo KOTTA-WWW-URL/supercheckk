@@ -158,7 +158,7 @@
     <div class="row"><button class="key" data-key="q" onclick="handleInput('q')">q</button><button class="key" data-key="w" onclick="handleInput('w')">w</button><button class="key" data-key="e" onclick="handleInput('e')">e</button><button class="key" data-key="r" onclick="handleInput('r')">r</button><button class="key" data-key="t" onclick="handleInput('t')">t</button><button class="key" data-key="y" onclick="handleInput('y')">y</button><button class="key" data-key="u" onclick="handleInput('u')">u</button><button class="key" data-key="i" onclick="handleInput('i')">i</button><button class="key" data-key="o" onclick="handleInput('o')">o</button><button class="key" data-key="p" onclick="handleInput('p')">p</button></div>
     <div class="row"><button class="key" data-key="a" onclick="handleInput('a')">a</button><button class="key" data-key="s" onclick="handleInput('s')">s</button><button class="key" data-key="d" onclick="handleInput('d')">d</button><button class="key" data-key="f" onclick="handleInput('f')">f</button><button class="key" data-key="g" onclick="handleInput('g')">g</button><button class="key" data-key="h" onclick="handleInput('h')">h</button><button class="key" data-key="j" onclick="handleInput('j')">j</button><button class="key" data-key="k" onclick="handleInput('k')">k</button><button class="key" data-key="l" onclick="handleInput('l')">l</button></div>
     <div class="row"><button class="key key-special" data-key="Shift" onclick="handleInput('Shift')">Shift</button><button class="key" data-key="z" onclick="handleInput('z')">z</button><button class="key" data-key="x" onclick="handleInput('x')">x</button><button class="key" data-key="c" onclick="handleInput('c')">c</button><button class="key" data-key="v" onclick="handleInput('v')">v</button><button class="key" data-key="b" onclick="handleInput('b')">b</button><button class="key" data-key="n" onclick="handleInput('n')">n</button><button class="key" data-key="m" onclick="handleInput('m')">m</button><button class="key key-special" data-key="Backspace" onclick="handleInput('Backspace')">⌫</button></div>
-    <div class="row"><button class="key" data-key="'" onclick="handleInput('\'')">'</button><button class="key" data-key="." onclick="handleInput('.')">.</button><button class="key" data-key="?" onclick="handleInput('?')">?</button><button class="key key-space" data-key=" " onclick="handleInput(' ')">Space</button><button class="key key-special" data-key="Enter" onclick="handleInput('Enter')">Enter</button></div>
+    <div class="row"><button class="key" data-key="~" onclick="handleInput('~')">~</button><button class="key" data-key="'" onclick="handleInput('\')">'</button><button class="key" data-key="." onclick="handleInput('.')">.</button><button class="key" data-key="?" onclick="handleInput('?')">?</button><button class="key key-space" data-key=" " onclick="handleInput(' ')">Space</button><button class="key key-special" data-key="Enter" onclick="handleInput('Enter')">Enter</button></div>
 </div>
 
 <script type="module">
@@ -364,7 +364,6 @@
                 checkAnswer();
             }
         } else if (key === " ") {
-            // [FIX 2] スペース入力後に次の入力欄へ進む
             inputs[activeInputIdx] += " ";
             if (activeInputIdx < inputs.length - 1) {
                 activeInputIdx++;
@@ -532,8 +531,6 @@
         else if (cmd === "add") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                // [FIX 3] add f all: fのとき length を使う（末尾への追加）
-                // [FIX 1] kotaeの区切りをカンマに変更
                 const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
                 if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length : parseInt(p[1]);
@@ -548,11 +545,9 @@
             } else {
                 const list = getListByName(listName);
                 if (!list) return logAdmin("Error: List not found.");
-                // [FIX 3] add f <list>: fのとき length を使う（末尾への追加）
                 const idx = p[1] === "f" ? list.length : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                // [FIX 1] kotaeの区切りをカンマに変更
                 if (listName === "kotae") data = data.split(",");
                 if (listName === "hani") data = parseInt(data);
                 list.splice(idx, 0, data);
@@ -563,7 +558,6 @@
         else if (cmd === "replace") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                // [FIX 1] kotaeの区切りをカンマに変更
                 const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
                 if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
@@ -582,7 +576,6 @@
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                // [FIX 1] kotaeの区切りをカンマに変更
                 if (listName === "kotae") data = data.split(",");
                 if (listName === "hani") data = parseInt(data);
                 list[idx] = data;
@@ -620,12 +613,13 @@
         'n','o','p','q','r','s','t','u','v','w','x','y','z',
         'A','B','C','D','E','F','G','H','I','J','K','L','M',
         'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-        "'", '.', '?', ' ', 'Enter', 'Backspace', 'Shift'
+        "'", '.', '?', '~', ' ', 'Enter', 'Backspace', 'Shift'
     ]);
 
     const KEY_MAP = {
         '7': "'",
         '/': '?',
+        '^': '~',
     };
 
     window.addEventListener('keydown', (e) => {
