@@ -303,19 +303,13 @@
 
             if (i === activeInputIdx) {
                 b.classList.add('active-box');
-                if (v === "" && subStyle === 'study') {
-                    b.innerText = ans[i] || "";
-                    b.style.color = "#ccc";
-                } else {
-                    // [FIX 2] スペースを可視化するためにnbspに変換して幅を確保
-                    b.innerText = v.replace(/ /g, '\u00A0');
-                    b.style.color = "#007bff";
-                }
+                b.innerText = v.replace(/ /g, '\u00A0');
+                b.style.color = "#007bff";
                 const c = document.createElement('span');
                 c.className = 'cursor';
                 b.appendChild(c);
             } else {
-                b.innerText = (v || (subStyle === 'study' ? ans[i] : "")).replace(/ /g, '\u00A0');
+                b.innerText = (v || "").replace(/ /g, '\u00A0');
                 b.style.color = v ? "#333" : "#ccc";
             }
         });
