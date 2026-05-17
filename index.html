@@ -17,16 +17,13 @@
             --special-key-bg: #adb5bd;
             --active-bg: #a0a0a0;
 
-            /* キーボードの高さを動的に計算するための変数 */
             --key-height: 50px;
             --key-font: 18px;
             --key-mb: 8px;
             --kbd-padding: 10px;
-            /* 4行 × (key-height + key-mb) + kbd-padding×2 */
             --keyboard-total: calc(var(--key-height) * 4 + var(--key-mb) * 4 + var(--kbd-padding) * 2);
         }
 
-        /* 画面の高さが小さい端末向け */
         @media (max-height: 600px) {
             :root {
                 --key-height: 36px;
@@ -43,7 +40,6 @@
                 --kbd-padding: 8px;
             }
         }
-        /* 画面幅が狭い端末向け（キー文字サイズ） */
         @media (max-width: 360px) {
             :root {
                 --key-font: 12px;
@@ -68,7 +64,6 @@
             align-items: center;
         }
 
-        /* ===== スクリーン共通 ===== */
         .screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: white; display: none; flex-direction: column;
@@ -78,14 +73,12 @@
         }
         .active-screen { display: flex; }
 
-        /* ===== ボタン ===== */
         .menu-btn {
             padding: 15px 30px; margin: 8px; font-size: clamp(14px, 4vw, 18px);
             cursor: pointer; border: none; background: #007bff; color: white; border-radius: 8px;
             min-width: min(280px, 85vw); transition: 0.2s;
         }
 
-        /* ===== 管理者 ===== */
         #admin-trigger {
             position: absolute; bottom: 20px; right: 20px;
             padding: 8px 15px; background: #6c757d; color: white;
@@ -106,7 +99,6 @@
             font-family: monospace; outline: none;
         }
 
-        /* ===== メッセージオーバーレイ ===== */
         #message-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: none; flex-direction: column; align-items: center; justify-content: center;
@@ -123,14 +115,12 @@
             color: #333; margin: 8px 0; text-align: center; padding: 0 8px;
         }
 
-        /* ===== ガチャ画像：画面サイズに合わせて縮む ===== */
         #gacha-result {
             text-align: center;
             margin-top: 8px;
             display: none;
         }
         #gacha-img {
-            /* 幅は画面幅の45%か250pxの小さい方、高さも画面高の25%以内 */
             max-width: min(220px, 42vw);
             max-height: 22vh;
             width: auto;
@@ -143,14 +133,11 @@
             font-size: clamp(11px, 3vw, 15px);
         }
 
-        /* ===== ゲームエリア ===== */
         #game-container {
-            /* キーボード分の余白を確保。固定margin-topは使わない */
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            /* キーボードの高さ分を引いた領域に収める */
             height: calc(100% - var(--keyboard-total));
             display: none;
             flex-direction: column;
@@ -184,7 +171,6 @@
         }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        /* ===== キーボード ===== */
         .keyboard {
             position: fixed;
             bottom: 0;
@@ -192,7 +178,6 @@
             background-color: var(--bg-color);
             padding: var(--kbd-padding) 0;
             display: none;
-            /* 安全領域（iPhoneのホームバーなど） */
             padding-bottom: calc(var(--kbd-padding) + env(safe-area-inset-bottom, 0px));
         }
         .row {
@@ -215,7 +200,6 @@
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
-            /* 幅が狭い画面でもはみ出さないように */
             min-width: 0;
             padding: 0 1px;
         }
@@ -232,23 +216,64 @@
         #allend-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: none; flex-direction: column;
-            align-items: center; justify-content: center;
+            align-items: center; justify-content: flex-start;
             z-index: 60; background: white;
-            padding: 20px;
+            padding: 24px 16px 32px;
+            overflow-y: auto;
         }
         #allend-title {
             font-size: clamp(40px, 12vw, 80px);
             font-weight: bold; letter-spacing: 4px; color: #222;
+            margin-top: 20px;
         }
         #allend-score {
             font-size: clamp(18px, 5vw, 32px);
-            color: #555; margin: 20px 0;
+            color: #555; margin: 16px 0;
         }
         #allend-back {
             padding: clamp(10px, 3vw, 15px) clamp(20px, 6vw, 40px);
             font-size: clamp(16px, 4vw, 20px);
             background: #007bff; color: white;
             border: none; border-radius: 8px; cursor: pointer; margin-top: 10px;
+        }
+
+        /* ===== 間違い一覧 ===== */
+        #wrong-list-section {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 24px;
+            text-align: left;
+        }
+        #wrong-list-title {
+            font-size: clamp(16px, 4.5vw, 22px);
+            font-weight: bold;
+            color: #c0392b;
+            margin-bottom: 12px;
+            border-left: 5px solid #c0392b;
+            padding-left: 10px;
+        }
+        .wrong-item {
+            background: #fff5f5;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+        }
+        .wrong-item .wi-mondai {
+            font-size: clamp(12px, 3.2vw, 15px);
+            color: #777;
+            margin-bottom: 4px;
+        }
+        .wrong-item .wi-answer {
+            font-size: clamp(13px, 3.5vw, 17px);
+            font-weight: bold;
+            color: #222;
+        }
+        .wrong-item .wi-answer span {
+            background: #ffe0e0;
+            border-radius: 4px;
+            padding: 1px 5px;
+            color: #c0392b;
         }
     </style>
 </head>
@@ -258,6 +283,10 @@
     <div id="allend-title">ALL END</div>
     <div id="allend-score"></div>
     <button id="allend-back" onclick="goToStart()">トップへ戻る</button>
+    <div id="wrong-list-section" style="display:none;">
+        <div id="wrong-list-title">❌ 間違えた問題</div>
+        <div id="wrong-list"></div>
+    </div>
 </div>
 
 <div id="message-overlay">
@@ -405,6 +434,8 @@
     let correctCount = 0;
     let totalQuestions = 0, correctTotal = 0;
     let retryPool = [];
+    // ★ 追加: 間違えた問題を記録する配列
+    let wrongAnswers = [];
 
     const GACHA_TABLE = [
         { src: "spch/Cn_transparent.png", prob: 40 },
@@ -433,13 +464,18 @@
 
     function setOrder(o) { playOrder = o; showScreen('style-screen'); }
     function setBaseStyle(s) { playStyle = s; showScreen('substyle-screen'); }
-    function setFinalStyle(s) { subStyle = s; correctCount = 0; startGame(); }
+    function setFinalStyle(s) {
+        subStyle = s;
+        correctCount = 0;
+        startGame();
+    }
 
     function startGame() {
         currentPos = 0;
         correctCount = 0;
         correctTotal = 0;
         retryPool = [];
+        wrongAnswers = []; // ★ リセット
         if (playOrder === 'random') currentPool.sort(() => Math.random() - 0.5);
         totalQuestions = currentPool.length;
         showScreen('');
@@ -594,6 +630,9 @@
             showMsg("正解", "green", () => next());
         } else {
             if (playStyle === 'retry') retryPool.push(idx);
+            // ★ 間違えた問題を記録
+            const mondaiText = window.rawMondai[idx] || "";
+            wrongAnswers.push({ mondai: mondaiText, answer: correctSentence });
             showMsg("不正解", "red", null, `正解: ${correctSentence}`);
         }
     }
@@ -671,11 +710,37 @@
         document.getElementById('main-keyboard').style.display = 'none';
         const overlay = document.getElementById('allend-overlay');
         const scoreEl = document.getElementById('allend-score');
+
         if (playStyle === 'once') {
             scoreEl.innerText = `${correctTotal} / ${totalQuestions} 問正解`;
         } else {
             scoreEl.innerText = "全問正解！";
         }
+
+        // ★ 間違い一覧の表示
+        const section = document.getElementById('wrong-list-section');
+        const listEl = document.getElementById('wrong-list');
+        listEl.innerHTML = "";
+
+        if (wrongAnswers.length > 0) {
+            section.style.display = 'block';
+            wrongAnswers.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.className = 'wrong-item';
+
+                // 答えの ( ) 部分を赤くハイライト
+                const highlightedAnswer = item.answer.replace(/\(([^)]*)\)/g, '(<span>$1</span>)');
+
+                div.innerHTML = `
+                    <div class="wi-mondai">Q${i + 1}. ${item.mondai}</div>
+                    <div class="wi-answer">正解: ${highlightedAnswer}</div>
+                `;
+                listEl.appendChild(div);
+            });
+        } else {
+            section.style.display = 'none';
+        }
+
         overlay.style.display = 'flex';
     }
 
