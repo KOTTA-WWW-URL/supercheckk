@@ -608,6 +608,7 @@
         const ans = window.rawKotaeGroups[idx] || [];
         const template = window.kaitouran[idx] || "";
 
+        // 入力が0個、または1つでも未入力があれば不正解
         const ok = inputs.every((v, i) => v.trim() === (ans[i] || ""));
 
         const parts = template.split("()");
@@ -618,7 +619,6 @@
         });
 
         if (ok) {
-            correctTotal++;
             if (subStyle === 'gacha') {
                 correctCount++;
                 if (correctCount >= 4) {
@@ -712,6 +712,7 @@
         const scoreEl = document.getElementById('allend-score');
 
         if (playStyle === 'once') {
+            const correctTotal = totalQuestions - wrongAnswers.length;
             scoreEl.innerText = `${correctTotal} / ${totalQuestions} 問正解`;
         } else {
             scoreEl.innerText = "全問正解！";
