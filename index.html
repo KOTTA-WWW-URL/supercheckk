@@ -761,7 +761,7 @@
 
     function tryAdminAccess() {
         // Firebaseから読み込んだパスを使用。未設定の場合はデフォルト値にフォールバック
-        const pass = window.adminPass || "0928";
+        const pass = window.adminPass;
         if (prompt("Pass?") === pass) showScreen('admin-screen');
     }
 
