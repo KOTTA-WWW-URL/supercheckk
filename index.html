@@ -403,6 +403,7 @@
     window.rawKotaeGroups = [];
     window.hani_end = [];
     window.kaitouran = [];
+    window.adminPass = null;
 
     onValue(dbRef, (snapshot) => {
         const data = snapshot.val();
@@ -411,6 +412,7 @@
             window.rawKotaeGroups = data.kotae || [];
             window.hani_end = data.hani || [];
             window.kaitouran = data.kaitouran || [];
+            window.adminPass = data.adminPass || null;
             renderVerList();
         }
     });
@@ -420,7 +422,8 @@
             mondai: window.rawMondai,
             kotae: window.rawKotaeGroups,
             hani: window.hani_end,
-            kaitouran: window.kaitouran
+            kaitouran: window.kaitouran,
+            adminPass: window.adminPass
         }).then(() => console.log("Cloud Updated!"));
     };
 </script>
@@ -434,7 +437,6 @@
     let correctCount = 0;
     let totalQuestions = 0, correctTotal = 0;
     let retryPool = [];
-    // ★ 追加: 間違えた問題を記録する配列
     let wrongAnswers = [];
 
     const GACHA_TABLE = [
@@ -475,7 +477,7 @@
         correctCount = 0;
         correctTotal = 0;
         retryPool = [];
-        wrongAnswers = []; // ★ リセット
+        wrongAnswers = [];
         if (playOrder === 'random') currentPool.sort(() => Math.random() - 0.5);
         totalQuestions = currentPool.length;
         showScreen('');
@@ -608,7 +610,6 @@
         const ans = window.rawKotaeGroups[idx] || [];
         const template = window.kaitouran[idx] || "";
 
-        // 入力が0個、または1つでも未入力があれば不正解
         const ok = inputs.every((v, i) => v.trim() === (ans[i] || ""));
 
         const parts = template.split("()");
@@ -630,7 +631,6 @@
             showMsg("正解", "green", () => next());
         } else {
             if (playStyle === 'retry') retryPool.push(idx);
-            // ★ 間違えた問題を記録
             const mondaiText = window.rawMondai[idx] || "";
             wrongAnswers.push({ mondai: mondaiText, answer: correctSentence });
             showMsg("不正解", "red", null, `正解: ${correctSentence}`);
@@ -718,7 +718,6 @@
             scoreEl.innerText = "全問正解！";
         }
 
-        // ★ 間違い一覧の表示
         const section = document.getElementById('wrong-list-section');
         const listEl = document.getElementById('wrong-list');
         listEl.innerHTML = "";
@@ -728,10 +727,7 @@
             wrongAnswers.forEach((item, i) => {
                 const div = document.createElement('div');
                 div.className = 'wrong-item';
-
-                // 答えの ( ) 部分を赤くハイライト
                 const highlightedAnswer = item.answer.replace(/\(([^)]*)\)/g, '(<span>$1</span>)');
-
                 div.innerHTML = `
                     <div class="wi-mondai">Q${i + 1}. ${item.mondai}</div>
                     <div class="wi-answer">正解: ${highlightedAnswer}</div>
@@ -764,7 +760,9 @@
     }
 
     function tryAdminAccess() {
-        if (prompt("Pass?") === "0928") showScreen('admin-screen');
+        // Firebaseから読み込んだパスを使用。未設定の場合はデフォルト値にフォールバック
+        const pass = window.adminPass || "0928";
+        if (prompt("Pass?") === pass) showScreen('admin-screen');
     }
 
     function logAdmin(t) {
@@ -788,7 +786,15 @@
         logAdmin("> " + full);
         const p = full.match(/(".*?"|[^"\s]+)/g)?.map(x => x.replace(/"/g, "")) || [];
         const cmd = p[0]?.toLowerCase();
+
         if (cmd === "exit") showScreen('start-screen');
+        else if (cmd === "setpass") {
+            const newPass = p[1];
+            if (!newPass) return logAdmin("Usage: setpass <新しいパスワード>");
+            window.adminPass = newPass;
+            window.saveToFirebase();
+            logAdmin(`パスワードを「${newPass}」に更新しました。次回ログインから有効です。`);
+        }
         else if (cmd === "show") {
             const listName = p[1]?.toLowerCase();
             if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
@@ -875,6 +881,10 @@
                 logAdmin(`Removed from ${listName} [${idx}] (${rem})`);
                 window.saveToFirebase();
             }
+        }
+        else {
+            logAdmin(`Unknown command: ${cmd}`);
+            logAdmin("Commands: exit, setpass, show, add, replace, remove");
         }
     }
 
