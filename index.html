@@ -572,7 +572,7 @@
 
     function handleInput(key) {
         if (isWaiting || document.getElementById('admin-screen').classList.contains('active-screen')) return;
-        flashKey(key);
+        if (document.getElementById('game-container').style.display !== 'flex') return;
 
         if (key === "Shift") {
             isShift = !isShift;
