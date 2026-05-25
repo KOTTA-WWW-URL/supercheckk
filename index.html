@@ -610,7 +610,8 @@
         const ans = window.rawKotaeGroups[idx] || [];
         const template = window.kaitouran[idx] || "";
 
-        const ok = inputs.every((v, i) => v.trim() === (ans[i] || ""));
+        const normalize = s => s.replace(/~/g, "");
+        const ok = inputs.every((v, i) => normalize(v.trim()) === normalize(ans[i] || ""));
 
         const parts = template.split("()");
         let correctSentence = "";
