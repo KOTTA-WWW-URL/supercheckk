@@ -802,14 +802,14 @@
             if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
             else {
                 const list = getListByName(listName);
-                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join("_"):v}`));
+                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join(","):v}`));
                 else logAdmin("Lists: mondai, kotae, hani, kaitouran");
             }
         }
         else if (cmd === "add") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split("_") : [], kaitouranData = p[5];
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
                 if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length : parseInt(p[1]);
@@ -818,7 +818,7 @@
                 window.rawMondai.splice(idxM, 0, mondaiData);
                 window.rawKotaeGroups.splice(idxK, 0, kotaeData);
                 window.kaitouran.splice(idxR, 0, kaitouranData);
-                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join("_")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
@@ -826,7 +826,7 @@
                 const idx = p[1] === "f" ? list.length : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split("_");
+                if (listName === "kotae") data = data.split(",");
                 if (listName === "hani") data = parseInt(data);
                 list.splice(idx, 0, data);
                 logAdmin(`Added to ${listName} at [${idx}]`);
@@ -836,7 +836,7 @@
         else if (cmd === "replace") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split("_") : [], kaitouranData = p[5];
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
                 if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
@@ -846,7 +846,7 @@
                 window.rawMondai[idxM] = mondaiData;
                 window.rawKotaeGroups[idxK] = kotaeData;
                 window.kaitouran[idxR] = kaitouranData;
-                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join("_")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
@@ -854,7 +854,7 @@
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split("_");
+                if (listName === "kotae") data = data.split(",");
                 if (listName === "hani") data = parseInt(data);
                 list[idx] = data;
                 logAdmin(`Replaced in ${listName} at [${idx}]`);
