@@ -809,7 +809,7 @@
         else if (cmd === "add") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split("_") : [], kaitouranData = p[5];
                 if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length : parseInt(p[1]);
@@ -826,7 +826,7 @@
                 const idx = p[1] === "f" ? list.length : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split(",");
+                if (listName === "kotae") data = data.split("_");
                 if (listName === "hani") data = parseInt(data);
                 list.splice(idx, 0, data);
                 logAdmin(`Added to ${listName} at [${idx}]`);
