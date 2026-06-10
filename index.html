@@ -800,7 +800,7 @@
             if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
             else {
                 const list = getListByName(listName);
-                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join(","):v}`));
+                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join("_"):v}`));
                 else logAdmin("Lists: mondai, kotae, hani, kaitouran");
             }
         }
