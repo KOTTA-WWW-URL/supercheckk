@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>すーぱーちぇっく(新)ver.3.0.1</title>
+    <title>すーぱーちぇっく(新)</title>
     <meta property="og:title" content="すーぱーちぇっく(新)" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://kotta-www-url.github.io/supercheckk/" />
@@ -802,7 +802,7 @@
             if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
             else {
                 const list = getListByName(listName);
-                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join(","):v}`));
+                if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join("_"):v}`));
                 else logAdmin("Lists: mondai, kotae, hani, kaitouran");
             }
         }
@@ -818,7 +818,7 @@
                 window.rawMondai.splice(idxM, 0, mondaiData);
                 window.rawKotaeGroups.splice(idxK, 0, kotaeData);
                 window.kaitouran.splice(idxR, 0, kaitouranData);
-                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join("_")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
@@ -846,7 +846,7 @@
                 window.rawMondai[idxM] = mondaiData;
                 window.rawKotaeGroups[idxK] = kotaeData;
                 window.kaitouran[idxR] = kaitouranData;
-                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join("_")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
