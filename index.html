@@ -374,10 +374,9 @@
     <div class="row">
         <button class="key" data-key="~" onclick="handleInput('~')">~</button>
         <button class="key" data-key="'" onclick="handleInput('\'')">'</button>
-        <button class="key" data-key="," onclick="handleInput(',')">，</button>
         <button class="key" data-key="." onclick="handleInput('.')">.</button>
         <button class="key" data-key="?" onclick="handleInput('?')">?</button>
-        <button class="key" data-key="!" onclick="handleInput('!')">!</button>
+        <button class="key" data-key="+" onclick="handleInput('+')">+</button>
         <button class="key key-space" data-key=" " onclick="handleInput(' ')">Space</button>
         <button class="key key-special" data-key="Enter" onclick="handleInput('Enter')">Enter</button>
     </div>
@@ -594,8 +593,7 @@
             } else {
                 checkAnswer();
             }
-        } else if (key === " ") {
-            inputs[activeInputIdx] += " ";
+        } else if (key === "_") {
             if (activeInputIdx < inputs.length - 1) {
                 activeInputIdx++;
             }
@@ -809,7 +807,7 @@
         else if (cmd === "add") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split("_") : [], kaitouranData = p[5];
                 if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length : parseInt(p[1]);
@@ -826,7 +824,7 @@
                 const idx = p[1] === "f" ? list.length : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split(",");
+                if (listName === "kotae") data = data.split("_");
                 if (listName === "hani") data = parseInt(data);
                 list.splice(idx, 0, data);
                 logAdmin(`Added to ${listName} at [${idx}]`);
@@ -836,7 +834,7 @@
         else if (cmd === "replace") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split(",") : [], kaitouranData = p[5];
+                const mondaiData = p[3], kotaeData = p[4] ? p[4].split("_") : [], kaitouranData = p[5];
                 if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
@@ -854,26 +852,29 @@
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split(",");
+                if (listName === "kotae") data = data.split("_");
                 if (listName === "hani") data = parseInt(data);
                 list[idx] = data;
-                logAdmin(`Replaced in ${listName} at [${idx}]`);
+                logAdmin(`Replaced ${listName} [${idx}] → ${Array.isArray(data) ? data.join(",") : data}`);
                 window.saveToFirebase();
             }
         }
         else if (cmd === "remove") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const idx = parseInt(p[1]);
-                if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
-                window.rawMondai.splice(idx, 1);
-                window.rawKotaeGroups.splice(idx, 1);
-                window.kaitouran.splice(idx, 1);
-                logAdmin(`Removed all at [${idx}]`);
+                const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
+                const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
+                const idxR = p[1] === "f" ? window.kaitouran.length - 1 : parseInt(p[1]);
+                if ([idxM,idxK,idxR].some(i => isNaN(i) || i < 0)) return logAdmin("Error: Invalid index.");
+                if (idxM >= window.rawMondai.length || idxK >= window.rawKotaeGroups.length || idxR >= window.kaitouran.length) return logAdmin("Error: Index out of range.");
+                const remM = window.rawMondai.splice(idxM, 1)[0];
+                const remK = window.rawKotaeGroups.splice(idxK, 1)[0];
+                const remR = window.kaitouran.splice(idxR, 1)[0];
+                logAdmin(`Removed all [${idxM}]: mondai="${remM}" kotae="${Array.isArray(remK)?remK.join(","):remK}" kaitouran="${remR}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
-                if (!list) return logAdmin("Error: List not found.");
+                if (!list || list.length === 0) return logAdmin("Error: List empty or not found.");
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 const rem = list.splice(idx, 1);
@@ -892,11 +893,10 @@
         'n','o','p','q','r','s','t','u','v','w','x','y','z',
         'A','B','C','D','E','F','G','H','I','J','K','L','M',
         'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-        "'", ',', '.', '?', '~', '+', '!', ' ', 'Enter', 'Backspace', 'Shift'
+        "'", '.', '?', '~', '+', '_', ' ', 'Enter', 'Backspace', 'Shift'
     ]);
 
     const KEY_MAP = {
-        '1': '!',
         '7': "'",
         '/': '?',
         '^': '~',
@@ -911,7 +911,7 @@
         if (KEY_MAP[key]) key = KEY_MAP[key];
         if (!ALLOWED_KEYS.has(key)) return;
 
-        flashKey(key === " " ? " " : key);
+        flashKey(key);
         handleInput(key);
     });
 </script>
