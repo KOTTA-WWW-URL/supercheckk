@@ -487,13 +487,20 @@
         loadQuestion();
     }
 
+    function getAns(idx) {
+        const raw = window.rawKotaeGroups[idx];
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        return raw.split("_");
+    }
+
     function loadQuestion() {
         const idx = currentPool[currentPos];
         const mondaiText = window.rawMondai[idx] || "";
         document.getElementById('mondai-display').innerText = mondaiText;
 
         const template = window.kaitouran[idx] || "";
-        const ans = window.rawKotaeGroups[idx] || [];
+        const ans = getAns(idx);
 
         const area = document.getElementById('answer-area');
         area.innerHTML = "";
@@ -523,7 +530,7 @@
 
     function updateDisplay() {
         const idx = currentPool[currentPos];
-        const ans = window.rawKotaeGroups[idx] || [];
+        const ans = getAns(idx);
 
         inputs.forEach((v, i) => {
             const b = document.getElementById(`box-${i}`);
@@ -607,7 +614,7 @@
 
     function checkAnswer() {
         const idx = currentPool[currentPos];
-        const ans = window.rawKotaeGroups[idx] || [];
+        const ans = getAns(idx);
         const template = window.kaitouran[idx] || "";
 
         const normalize = s => s.replace(/~/g, "");
@@ -807,8 +814,8 @@
         else if (cmd === "add") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split("_") : [], kaitouranData = p[5];
-                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
+                const mondaiData = p[3], kotaeData = p[4] || "", kaitouranData = p[5];
+                if (!mondaiData || !kotaeData || !kaitouranData) return logAdmin("Usage: add <idx/f> all <mondai> <kotae(_区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length : parseInt(p[1]);
                 const idxR = p[1] === "f" ? window.kaitouran.length : parseInt(p[1]);
@@ -816,7 +823,7 @@
                 window.rawMondai.splice(idxM, 0, mondaiData);
                 window.rawKotaeGroups.splice(idxK, 0, kotaeData);
                 window.kaitouran.splice(idxR, 0, kaitouranData);
-                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
@@ -824,18 +831,16 @@
                 const idx = p[1] === "f" ? list.length : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split("_");
                 if (listName === "hani") data = parseInt(data);
                 list.splice(idx, 0, data);
-                logAdmin(`Added to ${listName} at [${idx}]`);
                 window.saveToFirebase();
             }
         }
         else if (cmd === "replace") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const mondaiData = p[3], kotaeData = p[4] ? p[4].split("_") : [], kaitouranData = p[5];
-                if (!mondaiData || !kotaeData.length || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae(カンマ区切り)> <kaitouran>");
+                const mondaiData = p[3], kotaeData = p[4] || "", kaitouranData = p[5];
+                if (!mondaiData || !kotaeData || !kaitouranData) return logAdmin("Usage: replace <idx/f> all <mondai> <kotae(_区切り)> <kaitouran>");
                 const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
                 const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
                 const idxR = p[1] === "f" ? window.kaitouran.length - 1 : parseInt(p[1]);
@@ -844,7 +849,7 @@
                 window.rawMondai[idxM] = mondaiData;
                 window.rawKotaeGroups[idxK] = kotaeData;
                 window.kaitouran[idxR] = kaitouranData;
-                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
@@ -852,10 +857,9 @@
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "kotae") data = data.split("_");
                 if (listName === "hani") data = parseInt(data);
                 list[idx] = data;
-                logAdmin(`Replaced ${listName} [${idx}] → ${Array.isArray(data) ? data.join(",") : data}`);
+                logAdmin(`Replaced ${listName} [${idx}] → ${data}`);
                 window.saveToFirebase();
             }
         }
