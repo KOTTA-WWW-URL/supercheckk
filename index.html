@@ -377,8 +377,7 @@
         <button class="key" data-key="," onclick="handleInput(',')">，</button>
         <button class="key" data-key="." onclick="handleInput('.')">.</button>
         <button class="key" data-key="?" onclick="handleInput('?')">?</button>
-        <button class="key" data-key="!" onclick="handleInput('1')">!</button>
-        <button class="key" data-key="+" onclick="handleInput('+')">+</button>
+        <button class="key" data-key="!" onclick="handleInput('!')">!</button>
         <button class="key key-space" data-key=" " onclick="handleInput(' ')">Space</button>
         <button class="key key-special" data-key="Enter" onclick="handleInput('Enter')">Enter</button>
     </div>
@@ -858,26 +857,23 @@
                 if (listName === "kotae") data = data.split(",");
                 if (listName === "hani") data = parseInt(data);
                 list[idx] = data;
-                logAdmin(`Replaced ${listName} [${idx}] → ${Array.isArray(data) ? data.join(",") : data}`);
+                logAdmin(`Replaced in ${listName} at [${idx}]`);
                 window.saveToFirebase();
             }
         }
         else if (cmd === "remove") {
             const listName = p[2]?.toLowerCase();
             if (listName === "all") {
-                const idxM = p[1] === "f" ? window.rawMondai.length - 1 : parseInt(p[1]);
-                const idxK = p[1] === "f" ? window.rawKotaeGroups.length - 1 : parseInt(p[1]);
-                const idxR = p[1] === "f" ? window.kaitouran.length - 1 : parseInt(p[1]);
-                if ([idxM,idxK,idxR].some(i => isNaN(i) || i < 0)) return logAdmin("Error: Invalid index.");
-                if (idxM >= window.rawMondai.length || idxK >= window.rawKotaeGroups.length || idxR >= window.kaitouran.length) return logAdmin("Error: Index out of range.");
-                const remM = window.rawMondai.splice(idxM, 1)[0];
-                const remK = window.rawKotaeGroups.splice(idxK, 1)[0];
-                const remR = window.kaitouran.splice(idxR, 1)[0];
-                logAdmin(`Removed all [${idxM}]: mondai="${remM}" kotae="${Array.isArray(remK)?remK.join(","):remK}" kaitouran="${remR}"`);
+                const idx = parseInt(p[1]);
+                if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
+                window.rawMondai.splice(idx, 1);
+                window.rawKotaeGroups.splice(idx, 1);
+                window.kaitouran.splice(idx, 1);
+                logAdmin(`Removed all at [${idx}]`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
-                if (!list || list.length === 0) return logAdmin("Error: List empty or not found.");
+                if (!list) return logAdmin("Error: List not found.");
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 const rem = list.splice(idx, 1);
@@ -896,10 +892,11 @@
         'n','o','p','q','r','s','t','u','v','w','x','y','z',
         'A','B','C','D','E','F','G','H','I','J','K','L','M',
         'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-        "'", ',', '.', '?', '~', '+', ' ', 'Enter', 'Backspace', 'Shift'
+        "'", ',', '.', '?', '~', '+', '!', ' ', 'Enter', 'Backspace', 'Shift'
     ]);
 
     const KEY_MAP = {
+        '1': '!',
         '7': "'",
         '/': '?',
         '^': '~',
