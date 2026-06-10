@@ -376,6 +376,7 @@
         <button class="key" data-key="'" onclick="handleInput('\'')">'</button>
         <button class="key" data-key="." onclick="handleInput('.')">.</button>
         <button class="key" data-key="?" onclick="handleInput('?')">?</button>
+        <button class="key" data-key="+" onclick="handleInput('+')">+</button>
         <button class="key key-space" data-key=" " onclick="handleInput(' ')">Space</button>
         <button class="key key-special" data-key="Enter" onclick="handleInput('Enter')">Enter</button>
     </div>
@@ -761,7 +762,6 @@
     }
 
     function tryAdminAccess() {
-        // Firebaseから読み込んだパスを使用。未設定の場合はデフォルト値にフォールバック
         const pass = window.adminPass;
         if (prompt("Pass?") === pass) showScreen('admin-screen');
     }
@@ -894,13 +894,14 @@
         'n','o','p','q','r','s','t','u','v','w','x','y','z',
         'A','B','C','D','E','F','G','H','I','J','K','L','M',
         'N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
-        "'", '.', '?', '~', ' ', 'Enter', 'Backspace', 'Shift'
+        "'", '.', '?', '~', '+', ' ', 'Enter', 'Backspace', 'Shift'
     ]);
 
     const KEY_MAP = {
         '7': "'",
         '/': '?',
         '^': '~',
+        ';': '+',
     };
 
     window.addEventListener('keydown', (e) => {
