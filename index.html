@@ -627,7 +627,7 @@
                 correctCount++;
                 if (correctCount >= 4) {
                     correctCount = 0;
-                    showMsg("正解！", "green", null, "4回正解達成！おめでト！", true);
+                    showMsg("正解！", "green", null, "4回正解達成！おめでと！", true);
                     return;
                 }
             }
@@ -818,7 +818,7 @@
                 window.rawMondai.splice(idxM, 0, mondaiData);
                 window.rawKotaeGroups.splice(idxK, 0, kotaeData);
                 window.kaitouran.splice(idxR, 0, kaitouranData);
-                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join("_")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Added all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
@@ -846,7 +846,7 @@
                 window.rawMondai[idxM] = mondaiData;
                 window.rawKotaeGroups[idxK] = kotaeData;
                 window.kaitouran[idxR] = kaitouranData;
-                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join("_")}" kaitouran="${kaitouranData}"`);
+                logAdmin(`Replaced all [${idxM}]: mondai="${mondaiData}" kotae="${kotaeData.join(",")}" kaitouran="${kaitouranData}"`);
                 window.saveToFirebase();
             } else {
                 const list = getListByName(listName);
