@@ -490,8 +490,8 @@
     function getAns(idx) {
         const raw = window.rawKotaeGroups[idx];
         if (!raw) return [];
-        if (Array.isArray(raw)) return raw;
-        return raw.split("_");
+        const str = Array.isArray(raw) ? raw.join("_") : raw;
+        return str.split("_");
     }
 
     function loadQuestion() {
