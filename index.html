@@ -625,13 +625,20 @@
         const template = window.kaitouran[idx] || "";
 
         const normalize = s => s.replace(/~/g, "");
-        const ok = inputs.every((v, i) => normalize(v.trim()) === normalize(ans[i] || ""));
+        const ok = inputs.every((v, i) => {
+            const accepted = (ans[i] || "").split("/").map(a => normalize(a.trim()));
+            return accepted.includes(normalize(v.trim()));
+        });
 
         const parts = template.split("()");
         let correctSentence = "";
         parts.forEach((pt, i) => {
             correctSentence += pt;
-            if (i < parts.length - 1) correctSentence += `(${ans[i] || ""})`;
+            
+        if (i < parts.length - 1) {
+            const display = (ans[i] || "").split("/").map(a => a.trim()).join(" / ");
+            correctSentence += `(${display})`;
+        }
         });
 
         if (ok) {
