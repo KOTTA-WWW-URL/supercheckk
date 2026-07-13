@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>すーぱーちぇっく(新)</title>
-    <meta property="og:title" content="すーぱーちぇっく(新)" />
+    <title>SPCH</title>
+    <meta property="og:title" content="SPCH" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://kotta-www-url.github.io/supercheckk/" />
     <meta property="og:description" content="-すーぱーちぇっく-の練習として開発したものです。scratchのバージョン2です。" />
-    <meta property="og:site_name" content="すーぱーちぇっく(新)" />
+    <meta property="og:site_name" content="SPCH" />
     
     <style>
         :root {
@@ -455,6 +455,9 @@
         { src: "spch/Jn_transparent.png", prob: 1 },
     ];
 
+    // Shift時に別の記号を入力するためのマップ (画面キーの表示 -> Shift時の実際の入力文字)
+    const SHIFT_SYMBOL_MAP = { '?': '/' };
+
     function renderVerList() {
         const listEl = document.getElementById('ver-list');
         if (!listEl) return;
@@ -573,6 +576,9 @@
             if (k && k.length === 1 && k >= 'a' && k <= 'z') {
                 btn.innerText = isShift ? k.toUpperCase() : k;
             }
+            if (SHIFT_SYMBOL_MAP[k]) {
+                btn.innerText = isShift ? SHIFT_SYMBOL_MAP[k] : k;
+            }
             if (k === 'Shift') {
                 if (isShift) {
                     btn.classList.add('shift-active');
@@ -612,7 +618,13 @@
                 activeInputIdx++;
             }
         } else {
-            inputs[activeInputIdx] += isShift ? key.toUpperCase() : key.toLowerCase();
+            let actualKey;
+            if (isShift && SHIFT_SYMBOL_MAP[key]) {
+                actualKey = SHIFT_SYMBOL_MAP[key];
+            } else {
+                actualKey = isShift ? key.toUpperCase() : key.toLowerCase();
+            }
+            inputs[activeInputIdx] += actualKey;
             isShift = false;
             updateShiftDisplay();
         }
@@ -626,7 +638,7 @@
 
         const normalize = s => s.replace(/~/g, "");
         const ok = inputs.every((v, i) => {
-            const accepted = (ans[i] || "").split("/").map(a => normalize(a.trim()));
+            const accepted = (ans[i] || "").split("//").map(a => normalize(a.trim()));
             return accepted.includes(normalize(v.trim()));
         });
 
@@ -636,7 +648,7 @@
             correctSentence += pt;
             
         if (i < parts.length - 1) {
-            const display = (ans[i] || "").split("/").map(a => a.trim()).join(" / ");
+            const display = (ans[i] || "").split("//").map(a => a.trim()).join(" / ");
             correctSentence += `(${display})`;
         }
         });
@@ -927,6 +939,15 @@
         e.preventDefault();
 
         let key = e.key;
+
+        // 物理キーボードで Shift + "/" (=e.keyが"?"になる環境) が押されたら "/" 入力として扱う
+        if (key === '?' && e.shiftKey) {
+            flashKey('?');
+            isShift = true;
+            handleInput('?');
+            return;
+        }
+
         if (KEY_MAP[key]) key = KEY_MAP[key];
         if (!ALLOWED_KEYS.has(key)) return;
 
