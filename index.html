@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SPCH</title>
-    <meta property="og:title" content="SPCH" />
+    <title>すーぱーちぇっく(新)</title>
+    <meta property="og:title" content="すーぱーちぇっく(新)" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://kotta-www-url.github.io/supercheckk/" />
     <meta property="og:description" content="-すーぱーちぇっく-の練習として開発したものです。scratchのバージョン2です。" />
-    <meta property="og:site_name" content="SPCH" />
+    <meta property="og:site_name" content="すーぱーちぇっく(新)" />
     
     <style>
         :root {
@@ -275,6 +275,23 @@
             padding: 1px 5px;
             color: #c0392b;
         }
+
+        /* ===== 単語学習：範囲選択 ===== */
+        #tango-range-screen select {
+            font-size: clamp(14px, 4vw, 18px);
+            padding: 8px 12px;
+            margin: 0 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .tango-range-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
     </style>
 </head>
 <body>
@@ -323,6 +340,21 @@
     <h2>付加機能を選択</h2>
     <button class="menu-btn" onclick="setFinalStyle('gacha')" style="background:#ffc107; color:black;">ガチャモード (4回正解でガチャ)</button>
     <button class="menu-btn" onclick="setFinalStyle('study')" style="background:#17a2b8;">勉強モード</button>
+</div>
+
+<!-- ▼ 単語学習：範囲選択画面（新規追加） -->
+<div id="tango-range-screen" class="screen">
+    <h2>単語学習：範囲を選択</h2>
+    <div class="tango-range-row">
+        <label>開始：</label>
+        <select id="tango-start-select"></select>
+    </div>
+    <div class="tango-range-row">
+        <label>終了：</label>
+        <select id="tango-end-select"></select>
+    </div>
+    <button class="menu-btn" onclick="confirmTangoRange()">この範囲で開始</button>
+    <button class="menu-btn" style="background:#6c757d;" onclick="showScreen('start-screen')">戻る</button>
 </div>
 
 <div id="admin-screen" class="screen">
@@ -388,6 +420,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+    // ===== 既存DB（読み書き） =====
     const firebaseConfig = {
         apiKey: "AIzaSyBxS8UwIh4wKg36wXKI35mUht9lwCudxus",
         authDomain: "my-typing-game-b013f.firebaseapp.com",
@@ -429,6 +462,42 @@
             adminPass: window.adminPass
         }).then(() => console.log("Cloud Updated!"));
     };
+
+    // ===== 単語学習用DB（読み取り専用・新規追加） =====
+    const tangoFirebaseConfig = {
+        apiKey: "AIzaSyCPdILlioJpXCnxYmmEXoHgW6kCwHZ4NjU",
+        authDomain: "tango-bunpou-checker.firebaseapp.com",
+        databaseURL: "https://tango-bunpou-checker-default-rtdb.firebaseio.com",
+        projectId: "tango-bunpou-checker",
+        storageBucket: "tango-bunpou-checker.firebasestorage.app",
+        messagingSenderId: "875208468520",
+        appId: "1:875208468520:web:17070aea1c2f6f462f6d1d"
+    };
+
+    // 既にデフォルトAppが存在するため、名前を付けて2つ目のAppとして初期化
+    const tangoApp = initializeApp(tangoFirebaseConfig, "tangoApp");
+    const tangoDb = getDatabase(tangoApp);
+    // ルート直下を丸ごと読み取り、後段でキー名に柔軟対応する
+    const tangoDbRef = ref(tangoDb, '/');
+
+    window.rawTango = [];   // 英単語（答え）
+    window.rawImi = [];     // 意味（問題）
+    window.haniName = [];   // 範囲名リスト（例: "1-1","2-3"）
+    window.haniArr = [];    // haniNameに対応する境界値リスト
+
+    onValue(tangoDbRef, (snapshot) => {
+        const data = snapshot.val();
+        console.log("tangoDB raw data:", data); // デバッグ用：F12のコンソールで中身を確認できます
+        if (data) {
+            // "tangoData"というキーの下にある場合と、ルート直下に直接ある場合の両方に対応
+            const src = data.tangoData || data;
+            window.rawTango = src.tango || [];
+            window.rawImi = src.imi || [];
+            window.haniName = src.haniname || src.haniName || [];
+            window.haniArr = src.hani || [];
+            renderVerList(); // Verボタン一覧を再描画（単語学習ボタンも最後に付く）
+        }
+    });
 </script>
 
 <script>
@@ -441,6 +510,7 @@
     let totalQuestions = 0, correctTotal = 0;
     let retryPool = [];
     let wrongAnswers = [];
+    let isTangoMode = false; // 単語学習モードかどうか
 
     const GACHA_TABLE = [
         { src: "spch/Cn_transparent.png", prob: 20 },
@@ -467,12 +537,70 @@
             btn.className = 'menu-btn';
             btn.innerText = `Ver ${i + 1}.0`;
             btn.onclick = () => {
+                isTangoMode = false;
                 const start = i === 0 ? 0 : window.hani_end[i-1] + 1;
                 currentPool = Array.from({length: val - start + 1}, (_, k) => k + start);
                 showScreen('order-screen');
             };
             listEl.appendChild(btn);
         });
+
+        // ▼ 単語学習ボタンは、Verが何個あっても常に最後に表示
+        const tangoBtn = document.createElement('button');
+        tangoBtn.className = 'menu-btn';
+        tangoBtn.style.background = '#e83e8c';
+        tangoBtn.innerText = '単語学習';
+        tangoBtn.onclick = openTangoRange;
+        listEl.appendChild(tangoBtn);
+    }
+
+    // ===== 単語学習：範囲選択 =====
+    function openTangoRange() {
+        const startSel = document.getElementById('tango-start-select');
+        const endSel = document.getElementById('tango-end-select');
+        startSel.innerHTML = "";
+        endSel.innerHTML = "";
+
+        if (!window.haniName || window.haniName.length === 0) {
+            alert("単語データがまだ読み込まれていません。少し待ってからもう一度お試しください。（F12でコンソールを確認すると詳細が見られます）");
+            return;
+        }
+
+        window.haniName.forEach((name, i) => {
+            const o1 = document.createElement('option');
+            o1.value = i; o1.innerText = name;
+            startSel.appendChild(o1);
+            const o2 = document.createElement('option');
+            o2.value = i; o2.innerText = name;
+            endSel.appendChild(o2);
+        });
+        endSel.selectedIndex = window.haniName.length - 1;
+        showScreen('tango-range-screen');
+    }
+
+    function confirmTangoRange() {
+        const startPos = parseInt(document.getElementById('tango-start-select').value);
+        const endPos = parseInt(document.getElementById('tango-end-select').value);
+        if (isNaN(startPos) || isNaN(endPos)) {
+            alert("範囲を選択してください。");
+            return;
+        }
+
+        const s = Math.min(startPos, endPos);
+        const e = Math.max(startPos, endPos);
+
+        // 指定された計算式: 開始名のhani+1 ～ 終了名のhani-1
+        const rangeStart = window.haniArr[s] + 1;
+        const rangeEnd = window.haniArr[e] - 1;
+
+        if (isNaN(rangeStart) || isNaN(rangeEnd) || rangeStart > rangeEnd) {
+            alert("この範囲には問題がありません。別の範囲を選んでください。");
+            return;
+        }
+
+        isTangoMode = true;
+        currentPool = Array.from({length: rangeEnd - rangeStart + 1}, (_, k) => k + rangeStart);
+        showScreen('order-screen');
     }
 
     function setOrder(o) { playOrder = o; showScreen('style-screen'); }
@@ -498,6 +626,10 @@
     }
 
     function getAns(idx) {
+        if (isTangoMode) {
+            // 単語学習モード：tango配列の値（内部に"//"があれば複数正解扱い）
+            return [window.rawTango[idx] || ""];
+        }
         const raw = window.rawKotaeGroups[idx];
         if (!raw) return [];
         const str = Array.isArray(raw) ? raw.join("_") : raw;
@@ -506,10 +638,14 @@
 
     function loadQuestion() {
         const idx = currentPool[currentPos];
-        const mondaiText = window.rawMondai[idx] || "";
+
+        const mondaiText = isTangoMode
+            ? (window.rawImi[idx] || "")
+            : (window.rawMondai[idx] || "");
         document.getElementById('mondai-display').innerText = mondaiText;
 
-        const template = window.kaitouran[idx] || "";
+        // 単語学習モードは空欄1つだけのテンプレートを使う
+        const template = isTangoMode ? "()" : (window.kaitouran[idx] || "");
         const ans = getAns(idx);
 
         const area = document.getElementById('answer-area');
@@ -634,7 +770,7 @@
     function checkAnswer() {
         const idx = currentPool[currentPos];
         const ans = getAns(idx);
-        const template = window.kaitouran[idx] || "";
+        const template = isTangoMode ? "()" : (window.kaitouran[idx] || "");
 
         const normalize = s => s.replace(/~/g, "");
         const ok = inputs.every((v, i) => {
@@ -665,7 +801,9 @@
             showMsg("正解", "green", () => next());
         } else {
             if (playStyle === 'retry') retryPool.push(idx);
-            const mondaiText = window.rawMondai[idx] || "";
+            const mondaiText = isTangoMode
+                ? (window.rawImi[idx] || "")
+                : (window.rawMondai[idx] || "");
             wrongAnswers.push({ mondai: mondaiText, answer: correctSentence });
             showMsg("不正解", "red", null, `正解: ${correctSentence}`);
         }
@@ -777,6 +915,7 @@
 
     function goToStart() {
         document.getElementById('allend-overlay').style.display = 'none';
+        isTangoMode = false;
         showScreen('start-screen');
     }
 
