@@ -487,6 +487,14 @@
     // ルート直下を丸ごと読み取り、後段でキー名に柔軟対応する
     const tangoDbRef = ref(tangoDb, '/');
 
+    // "bunpou:to" や "words:foo" のようにプレフィックス+コロンが付いている場合、
+    // コロンより後ろだけを取り出す（プレフィックスが無ければそのまま返す）
+    function stripPrefix(s) {
+        if (typeof s !== 'string') return s;
+        const idx = s.indexOf(':');
+        return idx >= 0 ? s.slice(idx + 1) : s;
+    }
+
     window.rawTango = [];   // 英単語（答え）
     window.rawImi = [];     // 意味（問題）
     window.haniName = [];   // 範囲名リスト（例: "1-1","2-3"）
@@ -502,7 +510,7 @@
         if (data) {
             // "tangoData"というキーの下にある場合と、ルート直下に直接ある場合の両方に対応
             const src = data.tangoData || data;
-            window.rawTango = src.tango || [];
+            window.rawTango = (src.bwitems || []).map(stripPrefix);
             window.rawImi = src.imi || [];
             window.haniName = src.haniname || src.haniName || [];
             window.haniArr = src.hani || [];
