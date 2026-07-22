@@ -491,8 +491,12 @@
     window.rawImi = [];     // 意味（問題）
     window.haniName = [];   // 範囲名リスト（例: "1-1","2-3"）
     window.haniArr = [];    // haniNameに対応する境界値リスト
+    window.tangoLoadError = null; // 読み込みエラーがあればここに文字列で入る
+    window.tangoLoaded = false;   // 一度でもデータ取得を試みたか
 
     onValue(tangoDbRef, (snapshot) => {
+        window.tangoLoaded = true;
+        window.tangoLoadError = null;
         const data = snapshot.val();
         console.log("tangoDB raw data:", data); // デバッグ用：F12のコンソールで中身を確認できます
         if (data) {
@@ -502,8 +506,19 @@
             window.rawImi = src.imi || [];
             window.haniName = src.haniname || src.haniName || [];
             window.haniArr = src.hani || [];
-            renderVerList(); // Verボタン一覧を再描画（単語学習ボタンも最後に付く）
+            if (window.haniName.length === 0) {
+                window.tangoLoadError = "データは取得できましたが、haniname（範囲名リスト）が見つかりませんでした。フィールド名が違う可能性があります。実際のキー名: " + Object.keys(src).join(", ");
+            }
+        } else {
+            window.tangoLoadError = "データベースは空でした（dataがnull）。tango-bunpou-checkerのDBにまだ何も入力されていない可能性があります。";
         }
+        renderVerList(); // Verボタン一覧を再描画（単語学習ボタンも最後に付く）
+    }, (error) => {
+        // 読み取り権限エラーなど
+        window.tangoLoaded = true;
+        window.tangoLoadError = "読み込みエラー: " + error.code + " / " + error.message + "\n\n※ Firebaseの「Realtime Database」→「ルール」タブで read が true になっているか確認してください。";
+        console.error("tangoDB read error:", error);
+        renderVerList();
     });
 </script>
 
@@ -587,15 +602,21 @@
 
     // ===== 単語学習：範囲選択 =====
     function openTangoRange() {
+        if (!window.haniName || window.haniName.length === 0) {
+            if (window.tangoLoadError) {
+                alert("単語データの読み込みに失敗しました。\n\n" + window.tangoLoadError);
+            } else if (!window.tangoLoaded) {
+                alert("単語データをまだ読み込み中です。数秒待ってからもう一度お試しください。");
+            } else {
+                alert("単語データが空です。データベースの中身を確認してください。");
+            }
+            return;
+        }
+
         const startSel = document.getElementById('tango-start-select');
         const endSel = document.getElementById('tango-end-select');
         startSel.innerHTML = "";
         endSel.innerHTML = "";
-
-        if (!window.haniName || window.haniName.length === 0) {
-            alert("単語データがまだ読み込まれていません。少し待ってからもう一度お試しください。（F12でコンソールを確認すると詳細が見られます）");
-            return;
-        }
 
         window.haniName.forEach((name, i) => {
             const o1 = document.createElement('option');
