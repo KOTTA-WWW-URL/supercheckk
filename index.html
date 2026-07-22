@@ -336,6 +336,13 @@
     <button class="menu-btn" onclick="setBaseStyle('retry')">克服モード</button>
 </div>
 
+<!-- ▼ Word / Sentence 選択画面（新規追加） -->
+<div id="wordsentence-screen" class="screen">
+    <h2>種類を選択</h2>
+    <button class="menu-btn" style="background:#20c997;" onclick="selectWordSentence('word')">Word（語）</button>
+    <button class="menu-btn" style="background:#fd7e14;" onclick="selectWordSentence('sentence')">Sentence（文）</button>
+</div>
+
 <div id="substyle-screen" class="screen">
     <h2>付加機能を選択</h2>
     <button class="menu-btn" onclick="setFinalStyle('gacha')" style="background:#ffc107; color:black;">ガチャモード (4回正解でガチャ)</button>
@@ -511,6 +518,7 @@
     let retryPool = [];
     let wrongAnswers = [];
     let isTangoMode = false; // 単語学習モードかどうか
+    let pendingVerStart = 0, pendingWordEnd = 0, pendingSentenceEnd = 0; // Word/Sentence選択待ちの範囲情報
 
     const GACHA_TABLE = [
         { src: "spch/Cn_transparent.png", prob: 20 },
@@ -528,6 +536,18 @@
     // Shift時に別の記号を入力するためのマップ (画面キーの表示 -> Shift時の実際の入力文字)
     const SHIFT_SYMBOL_MAP = { '?': '/' };
 
+    // hani値を解析するヘルパー関数
+    // 通常の数値、または "30,50" のようなカンマ区切り文字列の両方に対応
+    function parseHaniRaw(raw) {
+        if (typeof raw === 'number') return { hasRange: false, end: raw };
+        const str = String(raw);
+        if (str.includes(',')) {
+            const parts = str.split(',').map(s => parseInt(s.trim()));
+            return { hasRange: true, wordEnd: parts[0], sentenceEnd: parts[1], end: parts[1] };
+        }
+        return { hasRange: false, end: parseInt(str) };
+    }
+
     function renderVerList() {
         const listEl = document.getElementById('ver-list');
         if (!listEl) return;
@@ -538,9 +558,20 @@
             btn.innerText = `Ver ${i + 1}.0`;
             btn.onclick = () => {
                 isTangoMode = false;
-                const start = i === 0 ? 0 : window.hani_end[i-1] + 1;
-                currentPool = Array.from({length: val - start + 1}, (_, k) => k + start);
-                showScreen('order-screen');
+                const prevEnd = i === 0 ? -1 : parseHaniRaw(window.hani_end[i-1]).end;
+                const start = prevEnd + 1;
+                const info = parseHaniRaw(val);
+
+                if (info.hasRange) {
+                    // "30,50" のようにカンマ区切りの場合、Word/Sentence選択画面へ
+                    pendingVerStart = start;
+                    pendingWordEnd = info.wordEnd;
+                    pendingSentenceEnd = info.sentenceEnd;
+                    showScreen('wordsentence-screen');
+                } else {
+                    currentPool = Array.from({length: info.end - start + 1}, (_, k) => k + start);
+                    showScreen('order-screen');
+                }
             };
             listEl.appendChild(btn);
         });
@@ -600,6 +631,19 @@
 
         isTangoMode = true;
         currentPool = Array.from({length: rangeEnd - rangeStart + 1}, (_, k) => k + rangeStart);
+        showScreen('order-screen');
+    }
+
+    // Word/Sentence選択後、範囲を確定してorder-screenへ（重複なし：Word=start~1個目、Sentence=1個目+1~2個目）
+    function selectWordSentence(type) {
+        const start = type === 'word' ? pendingVerStart : pendingWordEnd + 1;
+        const end = type === 'word' ? pendingWordEnd : pendingSentenceEnd;
+        if (isNaN(start) || isNaN(end) || start > end) {
+            alert("この範囲には問題がありません。");
+            return;
+        }
+        isTangoMode = false;
+        currentPool = Array.from({length: end - start + 1}, (_, k) => k + start);
         showScreen('order-screen');
     }
 
@@ -996,7 +1040,7 @@
                 const idx = p[1] === "f" ? list.length : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "hani") data = parseInt(data);
+                if (listName === "hani") data = data.includes(',') ? data : parseInt(data);
                 list.splice(idx, 0, data);
                 window.saveToFirebase();
             }
@@ -1022,7 +1066,7 @@
                 const idx = p[1] === "f" ? list.length - 1 : parseInt(p[1]);
                 if (isNaN(idx) || idx < 0 || idx >= list.length) return logAdmin("Error: Invalid index.");
                 let data = p[3];
-                if (listName === "hani") data = parseInt(data);
+                if (listName === "hani") data = data.includes(',') ? data : parseInt(data);
                 list[idx] = data;
                 logAdmin(`Replaced ${listName} [${idx}] → ${data}`);
                 window.saveToFirebase();
