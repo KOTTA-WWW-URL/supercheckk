@@ -508,8 +508,9 @@
         const data = snapshot.val();
         console.log("tangoDB raw data:", data); // デバッグ用：F12のコンソールで中身を確認できます
         if (data) {
-            // "tangoData"というキーの下にある場合と、ルート直下に直接ある場合の両方に対応
-            const src = data.tangoData || data;
+            // "tangoData"というキーの下、"lists"というキーの下、
+            // またはルート直下に直接ある場合の全パターンに対応
+            const src = data.lists || data.tangoData || data;
             window.rawTango = (src.bwitems || []).map(stripPrefix);
             window.rawImi = src.imi || [];
             window.haniName = src.haniname || src.haniName || [];
