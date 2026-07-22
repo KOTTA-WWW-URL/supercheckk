@@ -650,8 +650,10 @@
         const s = Math.min(startPos, endPos);
         const e = Math.max(startPos, endPos);
 
-        // 指定された計算式: 開始名のhani+1 ～ 終了名のhani-1
-        const rangeStart = window.haniArr[s] + 1;
+        // hani[i] は「その区分の終わり+1」を表す値。
+        // 区分の範囲は (1つ前のhaniの値) ～ (自分のhaniの値 - 1)
+        // 例: 2番目=30, 3番目=35 → 3番目を選ぶと 30～34
+        const rangeStart = s === 0 ? 0 : window.haniArr[s - 1];
         const rangeEnd = window.haniArr[e] - 1;
 
         if (isNaN(rangeStart) || isNaN(rangeEnd) || rangeStart > rangeEnd) {
