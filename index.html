@@ -661,6 +661,8 @@
             return;
         }
 
+        console.log(`[単語学習デバッグ] 選択範囲: startPos=${s}(${window.haniName[s]}), endPos=${e}(${window.haniName[e]}) → rangeStart=${rangeStart}, rangeEnd=${rangeEnd}`);
+
         isTangoMode = true;
         currentPool = Array.from({length: rangeEnd - rangeStart + 1}, (_, k) => k + rangeStart);
         showScreen('order-screen');
@@ -714,6 +716,10 @@
 
     function loadQuestion() {
         const idx = currentPool[currentPos];
+
+        if (isTangoMode) {
+            console.log(`[単語学習デバッグ] currentPos=${currentPos}, idx=${idx}, imi="${window.rawImi[idx]}", bwitems="${window.rawTango[idx]}"`);
+        }
 
         const mondaiText = isTangoMode
             ? (window.rawImi[idx] || "")
