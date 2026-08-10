@@ -325,6 +325,7 @@
     <h2>種類を選択</h2>
     <button class="menu-btn" style="background:#20c997;" onclick="selectWordSentence('word')">Word（語）</button>
     <button class="menu-btn" style="background:#fd7e14;" onclick="selectWordSentence('sentence')">Sentence（文）</button>
+    <button class="menu-btn" style="background:#6f42c1;" onclick="selectWordSentence('both')">両方</button>
 </div>
 
 <div id="substyle-screen" class="screen">
@@ -510,7 +511,7 @@
 
     // Word/Sentence選択後、範囲を確定してorder-screenへ（重複なし：Word=start~1個目、Sentence=1個目+1~2個目）
     function selectWordSentence(type) {
-        const start = type === 'word' ? pendingVerStart : pendingWordEnd + 1;
+        const start = type === 'sentence' ? pendingWordEnd + 1 : pendingVerStart;
         const end = type === 'word' ? pendingWordEnd : pendingSentenceEnd;
         if (isNaN(start) || isNaN(end) || start > end) {
             alert("この範囲には問題がありません。");
