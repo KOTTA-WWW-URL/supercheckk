@@ -276,22 +276,6 @@
             color: #c0392b;
         }
 
-        /* ===== 単語学習：範囲選択 ===== */
-        #tango-range-screen select {
-            font-size: clamp(14px, 4vw, 18px);
-            padding: 8px 12px;
-            margin: 0 8px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-        .tango-range-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 10px 0;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
     </style>
 </head>
 <body>
@@ -347,21 +331,6 @@
     <h2>付加機能を選択</h2>
     <button class="menu-btn" onclick="setFinalStyle('gacha')" style="background:#ffc107; color:black;">ガチャモード (4回正解でガチャ)</button>
     <button class="menu-btn" onclick="setFinalStyle('study')" style="background:#17a2b8;">勉強モード</button>
-</div>
-
-<!-- ▼ 単語学習：範囲選択画面（新規追加） -->
-<div id="tango-range-screen" class="screen">
-    <h2>単語学習：範囲を選択</h2>
-    <div class="tango-range-row">
-        <label>開始：</label>
-        <select id="tango-start-select"></select>
-    </div>
-    <div class="tango-range-row">
-        <label>終了：</label>
-        <select id="tango-end-select"></select>
-    </div>
-    <button class="menu-btn" onclick="confirmTangoRange()">この範囲で開始</button>
-    <button class="menu-btn" style="background:#6c757d;" onclick="showScreen('start-screen')">戻る</button>
 </div>
 
 <div id="admin-screen" class="screen">
@@ -469,66 +438,6 @@
             adminPass: window.adminPass
         }).then(() => console.log("Cloud Updated!"));
     };
-
-    // ===== 単語学習用DB（読み取り専用・新規追加） =====
-    const tangoFirebaseConfig = {
-        apiKey: "AIzaSyCPdILlioJpXCnxYmmEXoHgW6kCwHZ4NjU",
-        authDomain: "tango-bunpou-checker.firebaseapp.com",
-        databaseURL: "https://tango-bunpou-checker-default-rtdb.firebaseio.com",
-        projectId: "tango-bunpou-checker",
-        storageBucket: "tango-bunpou-checker.firebasestorage.app",
-        messagingSenderId: "875208468520",
-        appId: "1:875208468520:web:17070aea1c2f6f462f6d1d"
-    };
-
-    // 既にデフォルトAppが存在するため、名前を付けて2つ目のAppとして初期化
-    const tangoApp = initializeApp(tangoFirebaseConfig, "tangoApp");
-    const tangoDb = getDatabase(tangoApp);
-    // ルート直下を丸ごと読み取り、後段でキー名に柔軟対応する
-    const tangoDbRef = ref(tangoDb, '/');
-
-    // "bunpou:to" や "words:foo" のようにプレフィックス+コロンが付いている場合、
-    // コロンより後ろだけを取り出す（プレフィックスが無ければそのまま返す）
-    function stripPrefix(s) {
-        if (typeof s !== 'string') return s;
-        const idx = s.indexOf(':');
-        return idx >= 0 ? s.slice(idx + 1) : s;
-    }
-
-    window.rawTango = [];   // 英単語（答え）
-    window.rawImi = [];     // 意味（問題）
-    window.haniName = [];   // 範囲名リスト（例: "1-1","2-3"）
-    window.haniArr = [];    // haniNameに対応する境界値リスト
-    window.tangoLoadError = null; // 読み込みエラーがあればここに文字列で入る
-    window.tangoLoaded = false;   // 一度でもデータ取得を試みたか
-
-    onValue(tangoDbRef, (snapshot) => {
-        window.tangoLoaded = true;
-        window.tangoLoadError = null;
-        const data = snapshot.val();
-        console.log("tangoDB raw data:", data); // デバッグ用：F12のコンソールで中身を確認できます
-        if (data) {
-            // "tangoData"というキーの下、"lists"というキーの下、
-            // またはルート直下に直接ある場合の全パターンに対応
-            const src = data.lists || data.tangoData || data;
-            window.rawTango = (src.bwitems || []).map(stripPrefix);
-            window.rawImi = src.imi || [];
-            window.haniName = src.haniname || src.haniName || [];
-            window.haniArr = src.hani || [];
-            if (window.haniName.length === 0) {
-                window.tangoLoadError = "データは取得できましたが、haniname（範囲名リスト）が見つかりませんでした。フィールド名が違う可能性があります。実際のキー名: " + Object.keys(src).join(", ");
-            }
-        } else {
-            window.tangoLoadError = "データベースは空でした（dataがnull）。tango-bunpou-checkerのDBにまだ何も入力されていない可能性があります。";
-        }
-        renderVerList(); // Verボタン一覧を再描画（単語学習ボタンも最後に付く）
-    }, (error) => {
-        // 読み取り権限エラーなど
-        window.tangoLoaded = true;
-        window.tangoLoadError = "読み込みエラー: " + error.code + " / " + error.message + "\n\n※ Firebaseの「Realtime Database」→「ルール」タブで read が true になっているか確認してください。";
-        console.error("tangoDB read error:", error);
-        renderVerList();
-    });
 </script>
 
 <script>
@@ -541,7 +450,6 @@
     let totalQuestions = 0, correctTotal = 0;
     let retryPool = [];
     let wrongAnswers = [];
-    let isTangoMode = false; // 単語学習モードかどうか
     let pendingVerStart = 0, pendingWordEnd = 0, pendingSentenceEnd = 0; // Word/Sentence選択待ちの範囲情報
 
     const GACHA_TABLE = [
@@ -581,7 +489,6 @@
             btn.className = 'menu-btn';
             btn.innerText = `Ver ${i + 1}.0`;
             btn.onclick = () => {
-                isTangoMode = false;
                 const prevEnd = i === 0 ? -1 : parseHaniRaw(window.hani_end[i-1]).end;
                 const start = prevEnd + 1;
                 const info = parseHaniRaw(val);
@@ -599,73 +506,6 @@
             };
             listEl.appendChild(btn);
         });
-
-        // ▼ 単語学習ボタンは、Verが何個あっても常に最後に表示
-        const tangoBtn = document.createElement('button');
-        tangoBtn.className = 'menu-btn';
-        tangoBtn.style.background = '#e83e8c';
-        tangoBtn.innerText = '単語学習';
-        tangoBtn.onclick = openTangoRange;
-        listEl.appendChild(tangoBtn);
-    }
-
-    // ===== 単語学習：範囲選択 =====
-    function openTangoRange() {
-        if (!window.haniName || window.haniName.length === 0) {
-            if (window.tangoLoadError) {
-                alert("単語データの読み込みに失敗しました。\n\n" + window.tangoLoadError);
-            } else if (!window.tangoLoaded) {
-                alert("単語データをまだ読み込み中です。数秒待ってからもう一度お試しください。");
-            } else {
-                alert("単語データが空です。データベースの中身を確認してください。");
-            }
-            return;
-        }
-
-        const startSel = document.getElementById('tango-start-select');
-        const endSel = document.getElementById('tango-end-select');
-        startSel.innerHTML = "";
-        endSel.innerHTML = "";
-
-        window.haniName.forEach((name, i) => {
-            const o1 = document.createElement('option');
-            o1.value = i; o1.innerText = name;
-            startSel.appendChild(o1);
-            const o2 = document.createElement('option');
-            o2.value = i; o2.innerText = name;
-            endSel.appendChild(o2);
-        });
-        endSel.selectedIndex = window.haniName.length - 1;
-        showScreen('tango-range-screen');
-    }
-
-    function confirmTangoRange() {
-        const startPos = parseInt(document.getElementById('tango-start-select').value);
-        const endPos = parseInt(document.getElementById('tango-end-select').value);
-        if (isNaN(startPos) || isNaN(endPos)) {
-            alert("範囲を選択してください。");
-            return;
-        }
-
-        const s = Math.min(startPos, endPos);
-        const e = Math.max(startPos, endPos);
-
-        // hani[i] は「その区分の終わり+1」を表す値。
-        // 区分の範囲は (1つ前のhaniの値) ～ (自分のhaniの値 - 1)
-        // 例: 2番目=30, 3番目=35 → 3番目を選ぶと 30～34
-        const rangeStart = s === 0 ? 0 : window.haniArr[s - 1];
-        const rangeEnd = window.haniArr[e] - 1;
-
-        if (isNaN(rangeStart) || isNaN(rangeEnd) || rangeStart > rangeEnd) {
-            alert("この範囲には問題がありません。別の範囲を選んでください。");
-            return;
-        }
-
-        console.log(`[単語学習デバッグ] 選択範囲: startPos=${s}(${window.haniName[s]}), endPos=${e}(${window.haniName[e]}) → rangeStart=${rangeStart}, rangeEnd=${rangeEnd}`);
-
-        isTangoMode = true;
-        currentPool = Array.from({length: rangeEnd - rangeStart + 1}, (_, k) => k + rangeStart);
-        showScreen('order-screen');
     }
 
     // Word/Sentence選択後、範囲を確定してorder-screenへ（重複なし：Word=start~1個目、Sentence=1個目+1~2個目）
@@ -676,7 +516,6 @@
             alert("この範囲には問題がありません。");
             return;
         }
-        isTangoMode = false;
         currentPool = Array.from({length: end - start + 1}, (_, k) => k + start);
         showScreen('order-screen');
     }
@@ -704,10 +543,6 @@
     }
 
     function getAns(idx) {
-        if (isTangoMode) {
-            // 単語学習モード：tango配列の値（内部に"//"があれば複数正解扱い）
-            return [window.rawTango[idx] || ""];
-        }
         const raw = window.rawKotaeGroups[idx];
         if (!raw) return [];
         const str = Array.isArray(raw) ? raw.join("_") : raw;
@@ -717,17 +552,10 @@
     function loadQuestion() {
         const idx = currentPool[currentPos];
 
-        if (isTangoMode) {
-            console.log(`[単語学習デバッグ] currentPos=${currentPos}, idx=${idx}, imi="${window.rawImi[idx]}", bwitems="${window.rawTango[idx]}"`);
-        }
-
-        const mondaiText = isTangoMode
-            ? (window.rawImi[idx] || "")
-            : (window.rawMondai[idx] || "");
+        const mondaiText = window.rawMondai[idx] || "";
         document.getElementById('mondai-display').innerText = mondaiText;
 
-        // 単語学習モードは空欄1つだけのテンプレートを使う
-        const template = isTangoMode ? "()" : (window.kaitouran[idx] || "");
+        const template = window.kaitouran[idx] || "";
         const ans = getAns(idx);
 
         const area = document.getElementById('answer-area');
@@ -852,7 +680,7 @@
     function checkAnswer() {
         const idx = currentPool[currentPos];
         const ans = getAns(idx);
-        const template = isTangoMode ? "()" : (window.kaitouran[idx] || "");
+        const template = window.kaitouran[idx] || "";
 
         const normalize = s => s.replace(/~/g, "");
         const ok = inputs.every((v, i) => {
@@ -883,9 +711,7 @@
             showMsg("正解", "green", () => next());
         } else {
             if (playStyle === 'retry') retryPool.push(idx);
-            const mondaiText = isTangoMode
-                ? (window.rawImi[idx] || "")
-                : (window.rawMondai[idx] || "");
+            const mondaiText = window.rawMondai[idx] || "";
             wrongAnswers.push({ mondai: mondaiText, answer: correctSentence });
             showMsg("不正解", "red", null, `正解: ${correctSentence}`);
         }
@@ -997,7 +823,6 @@
 
     function goToStart() {
         document.getElementById('allend-overlay').style.display = 'none';
-        isTangoMode = false;
         showScreen('start-screen');
     }
 
