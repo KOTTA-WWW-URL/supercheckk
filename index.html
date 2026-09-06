@@ -305,6 +305,7 @@
 
 <div id="start-screen" class="screen active-screen">
     <h1>Versionを選択</h1>
+    <div id="ver-comment" style="display:none; color:red; font-weight:bold; margin-bottom:12px; text-align:center; white-space:pre-wrap;"></div>
     <div id="ver-list">読み込み中...</div>
     <button id="admin-trigger" onclick="tryAdminAccess()">管理者</button>
 </div>
@@ -418,6 +419,7 @@
     window.hani_end = [];
     window.kaitouran = [];
     window.adminPass = null;
+    window.verComment = "";
 
     onValue(dbRef, (snapshot) => {
         const data = snapshot.val();
@@ -427,6 +429,7 @@
             window.hani_end = data.hani || [];
             window.kaitouran = data.kaitouran || [];
             window.adminPass = data.adminPass || null;
+            window.verComment = data.comment || "";
             renderVerList();
         }
     });
@@ -437,7 +440,8 @@
             kotae: window.rawKotaeGroups,
             hani: window.hani_end,
             kaitouran: window.kaitouran,
-            adminPass: window.adminPass
+            adminPass: window.adminPass,
+            comment: window.verComment
         }).then(() => console.log("Cloud Updated!"));
     };
 </script>
@@ -483,6 +487,17 @@
     }
 
     function renderVerList() {
+        const commentEl = document.getElementById('ver-comment');
+        if (commentEl) {
+            if (window.verComment && window.verComment.trim() !== "") {
+                commentEl.innerText = window.verComment;
+                commentEl.style.display = 'block';
+            } else {
+                commentEl.innerText = "";
+                commentEl.style.display = 'none';
+            }
+        }
+
         const listEl = document.getElementById('ver-list');
         if (!listEl) return;
         listEl.innerHTML = "";
@@ -869,6 +884,17 @@
         const cmd = p[0]?.toLowerCase();
 
         if (cmd === "exit") showScreen('start-screen');
+        else if (cmd === "comment") {
+            const text = p.length > 1 ? p.slice(1).join(" ") : "";
+            window.verComment = text;
+            window.saveToFirebase();
+            if (text) {
+                logAdmin(`コメントを「${text}」に設定しました。`);
+            } else {
+                logAdmin("コメントを削除しました。");
+            }
+            renderVerList();
+        }
         else if (cmd === "setpass") {
             const newPass = p[1];
             if (!newPass) return logAdmin("Usage: setpass <新しいパスワード>");
@@ -962,7 +988,7 @@
         }
         else {
             logAdmin(`Unknown command: ${cmd}`);
-            logAdmin("Commands: exit, setpass, show, add, replace, remove");
+            logAdmin("Commands: exit, comment, setpass, show, add, replace, remove");
         }
     }
 
