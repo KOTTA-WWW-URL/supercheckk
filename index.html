@@ -129,6 +129,10 @@
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
+        #gacha-name {
+            margin-top: 8px; font-weight: bold; color: #222;
+            font-size: clamp(16px, 4.5vw, 24px);
+        }
         #gacha-prob {
             margin-top: 6px; font-weight: bold; color: #666;
             font-size: clamp(11px, 3vw, 15px);
@@ -296,6 +300,7 @@
     <div id="message-sub"></div>
     <div id="gacha-result">
         <img id="gacha-img" src="">
+        <div id="gacha-name"></div>
         <div id="gacha-prob"></div>
     </div>
     <button id="gacha-btn" class="menu-btn" style="display:none; background:#ffc107; color:black;" onclick="pullGacha()">ガチャを引く！</button>
@@ -420,6 +425,7 @@
     window.kaitouran = [];
     window.adminPass = null;
     window.verComment = "";
+    window.gachaConfig = [];
 
     onValue(dbRef, (snapshot) => {
         const data = snapshot.val();
@@ -430,6 +436,7 @@
             window.kaitouran = data.kaitouran || [];
             window.adminPass = data.adminPass || null;
             window.verComment = data.comment || "";
+            window.gachaConfig = data.gacha || [];
             renderVerList();
         }
     });
@@ -441,7 +448,8 @@
             hani: window.hani_end,
             kaitouran: window.kaitouran,
             adminPass: window.adminPass,
-            comment: window.verComment
+            comment: window.verComment,
+            gacha: window.gachaConfig
         }).then(() => console.log("Cloud Updated!"));
     };
 </script>
@@ -458,18 +466,33 @@
     let wrongAnswers = [];
     let pendingVerStart = 0, pendingWordEnd = 0, pendingSentenceEnd = 0; // Word/Sentence選択待ちの範囲情報
 
+    // 初期値（Firebaseに kakuritsu コマンドで保存した値があればそちらが優先される）
     const GACHA_TABLE = [
-        { src: "spch/Cn_transparent.png", prob: 20 },
-        { src: "spch/En_transparent.png", prob: 20 },
-        { src: "spch/Fn_transparent.png", prob: 20 },
-        { src: "spch/Gn_transparent.png", prob: 20 },
-        { src: "spch/An_transparent.png", prob: 5 },
-        { src: "spch/Hn_transparent.png", prob: 5 },
-        { src: "spch/Dn_transparent.png", prob: 4 },
-        { src: "spch/In_transparent.png", prob: 3 },
-        { src: "spch/Bn_transparent.png", prob: 2 },
-        { src: "spch/Jn_transparent.png", prob: 1 },
+        { src: "spch/Cn_transparent.png", prob: 20, name: "イラストC" },
+        { src: "spch/En_transparent.png", prob: 20, name: "イラストE" },
+        { src: "spch/Fn_transparent.png", prob: 20, name: "イラストF" },
+        { src: "spch/Gn_transparent.png", prob: 20, name: "イラストG" },
+        { src: "spch/An_transparent.png", prob: 5, name: "イラストA" },
+        { src: "spch/Hn_transparent.png", prob: 5, name: "イラストH" },
+        { src: "spch/Dn_transparent.png", prob: 4, name: "イラストD" },
+        { src: "spch/In_transparent.png", prob: 3, name: "イラストI" },
+        { src: "spch/Bn_transparent.png", prob: 2, name: "イラストB" },
+        { src: "spch/Jn_transparent.png", prob: 1, name: "イラストJ" },
     ];
+
+    // 初期値に、保存済みの確率・名前を重ねた実際のガチャ表を返す
+    function getGachaTable() {
+        const cfg = window.gachaConfig || [];
+        return GACHA_TABLE.map((g, i) => {
+            const c = cfg[i] || {};
+            const prob = Number(c.prob);
+            return {
+                src: g.src,
+                prob: (c.prob !== undefined && Number.isFinite(prob) && prob >= 0) ? prob : g.prob,
+                name: (typeof c.name === 'string' && c.name !== "") ? c.name : g.name
+            };
+        });
+    }
 
     // Shift時に別の記号を入力するためのマップ (画面キーの表示 -> Shift時の実際の入力文字)
     const SHIFT_SYMBOL_MAP = { '?': '/' };
@@ -761,9 +784,12 @@
     }
 
     function pullGacha() {
-        const rand = Math.random() * 100;
-        let sum = 0, selected = GACHA_TABLE[0];
-        for (const item of GACHA_TABLE) {
+        const table = getGachaTable();
+        const total = table.reduce((s, g) => s + g.prob, 0);
+        // 合計が100%でなくても動くよう、合計値を基準に抽選する
+        const rand = Math.random() * total;
+        let sum = 0, selected = table[0];
+        for (const item of table) {
             sum += item.prob;
             if (rand < sum) { selected = item; break; }
         }
@@ -771,6 +797,7 @@
         document.getElementById('mix-btn').style.display = 'none';
         const res = document.getElementById('gacha-result');
         document.getElementById('gacha-img').src = selected.src;
+        document.getElementById('gacha-name').innerText = selected.name;
         document.getElementById('gacha-prob').innerText = `出現確率: ${selected.prob}%`;
         res.style.display = 'block';
         document.getElementById('next-btn-manual').style.display = 'block';
@@ -895,6 +922,41 @@
             }
             renderVerList();
         }
+        else if (cmd === "kakuritsu") {
+            const table = getGachaTable();
+            const usage = "Usage: kakuritsu <番号> <確率%>  /  kakuritsu name <番号> <ゲーム内の名前>  /  show kakuritsu";
+            const isName = p[1]?.toLowerCase() === "name";
+            const numStr = isName ? p[2] : p[1];
+            const num = parseInt(numStr);
+            if (!numStr || isNaN(num) || num < 1 || num > table.length) {
+                return logAdmin(`Error: 番号は 1〜${table.length} で指定してください。\n${usage}`);
+            }
+            const idx = num - 1;
+            const cfg = table.map(g => ({ prob: g.prob, name: g.name }));
+
+            if (isName) {
+                const newName = p.slice(3).join(" ");
+                if (!newName) return logAdmin(usage);
+                cfg[idx].name = newName;
+                window.gachaConfig = cfg;
+                window.saveToFirebase();
+                logAdmin(`[${num}] の名前を「${newName}」に設定しました。`);
+            } else {
+                const prob = parseFloat((p[2] || "").replace("%", ""));
+                if (!Number.isFinite(prob) || prob < 0 || prob > 100) {
+                    return logAdmin(`Error: 確率は 0〜100 の数値で指定してください。\n${usage}`);
+                }
+                const oldProb = cfg[idx].prob;
+                cfg[idx].prob = prob;
+                const total = cfg.reduce((s, g) => s + g.prob, 0);
+                if (total <= 0) return logAdmin("Error: 全ての確率が0%になるため設定できません。");
+                window.gachaConfig = cfg;
+                window.saveToFirebase();
+                logAdmin(`[${num}] ${cfg[idx].name}: ${oldProb}% → ${prob}% に設定しました。`);
+                const totalRounded = Math.round(total * 1000) / 1000;
+                if (totalRounded !== 100) logAdmin(`注意: 合計が ${totalRounded}% です（100%ではないため、合計を基準に按分して抽選されます）。`);
+            }
+        }
         else if (cmd === "setpass") {
             const newPass = p[1];
             if (!newPass) return logAdmin("Usage: setpass <新しいパスワード>");
@@ -904,11 +966,21 @@
         }
         else if (cmd === "show") {
             const listName = p[1]?.toLowerCase();
-            if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
+            if (listName === "kakuritsu") {
+                const table = getGachaTable();
+                table.forEach((g, i) => {
+                    const file = g.src.split("/").pop();
+                    logAdmin(`[${i + 1}] ${file} | ${g.prob}% | ${g.name}`);
+                });
+                const total = table.reduce((s, g) => s + g.prob, 0);
+                const totalRounded = Math.round(total * 1000) / 1000;
+                logAdmin(`合計: ${totalRounded}%` + (totalRounded !== 100 ? "（100%ではないため、合計を基準に按分して抽選されます）" : ""));
+            }
+            else if (listName === "all") logAdmin(`Sizes: mondai:${window.rawMondai.length}, kotae:${window.rawKotaeGroups.length}, hani:${window.hani_end.length}, kaitouran:${window.kaitouran.length}`);
             else {
                 const list = getListByName(listName);
                 if (list) list.forEach((v, i) => logAdmin(`[${i}] ${Array.isArray(v)?v.join("_"):v}`));
-                else logAdmin("Lists: mondai, kotae, hani, kaitouran");
+                else logAdmin("Lists: mondai, kotae, hani, kaitouran, kakuritsu");
             }
         }
         else if (cmd === "add") {
@@ -988,7 +1060,7 @@
         }
         else {
             logAdmin(`Unknown command: ${cmd}`);
-            logAdmin("Commands: exit, comment, setpass, show, add, replace, remove");
+            logAdmin("Commands: exit, comment, kakuritsu, setpass, show, add, replace, remove");
         }
     }
 
