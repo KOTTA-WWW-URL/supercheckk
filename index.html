@@ -481,9 +481,10 @@
     ];
 
     // 初期値に、保存済みの確率・名前を重ねた実際のガチャ表を返す
+    // 組み込みの10枚の後ろに、kakuritsu add で追加した画像が続く
     function getGachaTable() {
         const cfg = window.gachaConfig || [];
-        return GACHA_TABLE.map((g, i) => {
+        const table = GACHA_TABLE.map((g, i) => {
             const c = cfg[i] || {};
             const prob = Number(c.prob);
             return {
@@ -492,6 +493,25 @@
                 name: (typeof c.name === 'string' && c.name !== "") ? c.name : g.name
             };
         });
+        for (let i = GACHA_TABLE.length; i < cfg.length; i++) {
+            const c = cfg[i];
+            if (!c || typeof c.src !== 'string' || c.src === "") continue;
+            const prob = Number(c.prob);
+            table.push({
+                src: c.src,
+                prob: (Number.isFinite(prob) && prob >= 0) ? prob : 0,
+                name: (typeof c.name === 'string' && c.name !== "") ? c.name : c.src.split("/").pop()
+            });
+        }
+        return table;
+    }
+
+    // 画像が実際に読み込めるか確認する（キャッシュ回避のため時刻付きで取得）
+    function checkImageExists(src, cb) {
+        const img = new Image();
+        img.onload = () => cb(true);
+        img.onerror = () => cb(false);
+        img.src = encodeURI(src) + "?t=" + Date.now();
     }
 
     // Shift時に別の記号を入力するためのマップ (画面キーの表示 -> Shift時の実際の入力文字)
@@ -796,7 +816,7 @@
         document.getElementById('gacha-btn').style.display = 'none';
         document.getElementById('mix-btn').style.display = 'none';
         const res = document.getElementById('gacha-result');
-        document.getElementById('gacha-img').src = selected.src;
+        document.getElementById('gacha-img').src = encodeURI(selected.src);
         document.getElementById('gacha-name').innerText = selected.name;
         document.getElementById('gacha-prob').innerText = `出現確率: ${selected.prob}%`;
         res.style.display = 'block';
@@ -924,15 +944,66 @@
         }
         else if (cmd === "kakuritsu") {
             const table = getGachaTable();
-            const usage = "Usage: kakuritsu <番号> <確率%>  /  kakuritsu name <番号> <ゲーム内の名前>  /  show kakuritsu";
-            const isName = p[1]?.toLowerCase() === "name";
+            const usage = "Usage: kakuritsu <番号> <確率%>  /  kakuritsu name <番号> <名前>  /  kakuritsu add <ファイル名> <確率%> <名前>  /  kakuritsu remove <番号>  /  show kakuritsu";
+            const sub = p[1]?.toLowerCase();
+            const isName = sub === "name";
+            const cfg = table.map(g => ({ src: g.src, prob: g.prob, name: g.name }));
+
+            // ---- 新しい画像を追加 ----
+            if (sub === "add") {
+                let file = p[2];
+                if (!file) return logAdmin(`Error: ファイル名を指定してください。\n${usage}`);
+                file = file.replace(/^spch\//, "");
+                if (/[\\\/]/.test(file) || file.includes("..") || !/\.(png|jpe?g|gif|webp)$/i.test(file)) {
+                    return logAdmin("Error: ファイル名は spch フォルダ内の画像（png/jpg/jpeg/gif/webp）を、フォルダ名なしで指定してください。");
+                }
+                const src = "spch/" + file;
+                if (cfg.some(g => g.src.toLowerCase() === src.toLowerCase())) {
+                    return logAdmin(`Error: ${file} は既に登録されています。`);
+                }
+                const prob = parseFloat((p[3] || "").replace("%", ""));
+                if (!Number.isFinite(prob) || prob < 0 || prob > 100) {
+                    return logAdmin(`Error: 確率は 0〜100 の数値で指定してください。\n${usage}`);
+                }
+                const newName = p.slice(4).join(" ") || file.replace(/\.[^.]+$/, "");
+                cfg.push({ src, prob, name: newName });
+                const total = cfg.reduce((s, g) => s + g.prob, 0);
+                window.gachaConfig = cfg;
+                window.saveToFirebase();
+                logAdmin(`[${cfg.length}] ${file} | ${prob}% | ${newName} を追加しました。`);
+                const totalRounded = Math.round(total * 1000) / 1000;
+                if (totalRounded !== 100) logAdmin(`注意: 合計が ${totalRounded}% です（100%ではないため、合計を基準に按分して抽選されます）。`);
+                checkImageExists(src, ok => {
+                    if (ok) logAdmin(`画像の読み込み確認: OK（${src}）`);
+                    else logAdmin(`警告: ${src} を読み込めませんでした。spch フォルダにアップロード済みか、ファイル名の大文字小文字が合っているか確認してください（アップロード直後はGitHub Pagesの反映に数分かかることがあります）。`);
+                });
+                return;
+            }
+
+            // ---- 追加した画像を削除 ----
+            if (sub === "remove") {
+                const rnum = parseInt(p[2]);
+                if (isNaN(rnum) || rnum < 1 || rnum > table.length) {
+                    return logAdmin(`Error: 番号は 1〜${table.length} で指定してください。\n${usage}`);
+                }
+                if (rnum <= GACHA_TABLE.length) {
+                    return logAdmin(`Error: [${rnum}] は最初から入っている画像のため削除できません。出したくない場合は kakuritsu ${rnum} 0 で確率を0%にしてください。`);
+                }
+                const removed = cfg.splice(rnum - 1, 1)[0];
+                const total = cfg.reduce((s, g) => s + g.prob, 0);
+                if (total <= 0) return logAdmin("Error: 全ての確率が0%になるため削除できません。");
+                window.gachaConfig = cfg;
+                window.saveToFirebase();
+                logAdmin(`[${rnum}] ${removed.src.split("/").pop()}（${removed.name}）を削除しました。以降の番号は1つずつ繰り上がります。`);
+                return;
+            }
+
             const numStr = isName ? p[2] : p[1];
             const num = parseInt(numStr);
             if (!numStr || isNaN(num) || num < 1 || num > table.length) {
                 return logAdmin(`Error: 番号は 1〜${table.length} で指定してください。\n${usage}`);
             }
             const idx = num - 1;
-            const cfg = table.map(g => ({ prob: g.prob, name: g.name }));
 
             if (isName) {
                 const newName = p.slice(3).join(" ");
